@@ -64,6 +64,14 @@ probability the model issued across the out-of-sample matches:
 No model is a crystal ball — football is high-variance and draws are genuinely hard. These are
 well-calibrated estimates, and we make **no claim to beat the betting market**.
 
+## 📊 Live track record (2026)
+
+The model's call on **every finished match** of the tournament, updated as it happens:
+
+<!-- TRACK-RECORD:START -->
+_The tournament kicked off **Jun 11** — this table fills in automatically as matches finish. Check back after the first matchday._
+<!-- TRACK-RECORD:END -->
+
 ## Quick start
 
 No dependencies. Node 18+.
@@ -112,8 +120,10 @@ $ node predict.mjs spain germany
 | `calibrate.mjs` | Build calibrated ratings from `data/results.json` |
 | `backtest.mjs` | Walk-forward out-of-sample evaluation (RPS, log-loss, Brier, ECE + reliability curve) |
 | `predict.mjs` | CLI head-to-head predictor |
+| `track-record.mjs` | Regenerates the live 2026 track-record table in this README |
 | `data/results.json` | 913 real international results (Oct 2023 – Jun 2026) |
 | `data/elo-calibrated.json` | Calibrated Elo for the 48 finalists |
+| `data/wc2026-results.json` | Finished 2026 World Cup matches (feeds the track record) |
 | `data/model-backtest.json` | Saved backtest metrics |
 
 ## License
