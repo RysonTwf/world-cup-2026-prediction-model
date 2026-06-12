@@ -69,10 +69,11 @@ well-calibrated estimates, and we make **no claim to beat the betting market**.
 The model's call on **every finished match** of the tournament, updated as it happens:
 
 <!-- TRACK-RECORD:START -->
-**1/1 correct picks (100%) · avg RPS 0.046** (coin-flip ≈ 0.245) · updated 2026-06-11
+**2/2 correct picks (100%) · avg RPS 0.103** (coin-flip ≈ 0.245) · updated 2026-06-12
 
 | Date | Result | Model's pick | |
 |---|---|---|---|
+| 2026-06-11 | South Korea 2–1 Czech Republic | South Korea 49% | ✅ |
 | 2026-06-11 | Mexico 2–0 South Africa | Mexico 71% | ✅ |
 
 _Every call is listed — hits and misses. Probabilities are the model's frozen pre-match numbers (ratings don't re-fit mid-tournament), so nothing here is retro-fitted. Reproduce with `node track-record.mjs`._
