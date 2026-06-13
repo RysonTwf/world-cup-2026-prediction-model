@@ -1,5 +1,5 @@
 {
- "updated": "2026-06-12T21:07:23.681Z",
+ "updated": "2026-06-13T03:51:17.736Z",
  "matches": [
   {
    "date": "2026-06-11",
@@ -40,6 +40,21 @@
    "t1": "canada",
    "t2": "bosnia-and-herzegovina",
    "g1": 1,
+   "g2": 1,
+   "pens1": null,
+   "pens2": null,
+   "status": "FT",
+   "winner": null
+  },
+  {
+   "date": "2026-06-12",
+   "round": "Matchday 2",
+   "group": "Group D",
+   "team1": "USA",
+   "team2": "Paraguay",
+   "t1": "usa",
+   "t2": "paraguay",
+   "g1": 4,
    "g2": 1,
    "pens1": null,
    "pens2": null,
