@@ -1,5 +1,5 @@
 {
- "updated": "2026-06-14T11:49:24.540Z",
+ "updated": "2026-06-14T23:04:47.171Z",
  "matches": [
   {
    "date": "2026-06-11",
@@ -116,6 +116,36 @@
    "t2": "turkey",
    "g1": 2,
    "g2": 0,
+   "pens1": null,
+   "pens2": null,
+   "status": "FT",
+   "winner": null
+  },
+  {
+   "date": "2026-06-14",
+   "round": "Matchday 4",
+   "group": "Group E",
+   "team1": "Germany",
+   "team2": "Curaçao",
+   "t1": "germany",
+   "t2": "curacao",
+   "g1": 7,
+   "g2": 1,
+   "pens1": null,
+   "pens2": null,
+   "status": "FT",
+   "winner": null
+  },
+  {
+   "date": "2026-06-14",
+   "round": "Matchday 4",
+   "group": "Group F",
+   "team1": "Netherlands",
+   "team2": "Japan",
+   "t1": "netherlands",
+   "t2": "japan",
+   "g1": 2,
+   "g2": 2,
    "pens1": null,
    "pens2": null,
    "status": "FT",
