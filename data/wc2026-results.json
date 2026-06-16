@@ -1,5 +1,5 @@
 {
- "updated": "2026-06-15T18:07:33.476Z",
+ "updated": "2026-06-16T07:24:40.764Z",
  "matches": [
   {
    "date": "2026-06-11",
@@ -184,6 +184,36 @@
   {
    "date": "2026-06-15",
    "round": "Matchday 5",
+   "group": "Group G",
+   "team1": "Belgium",
+   "team2": "Egypt",
+   "t1": "belgium",
+   "t2": "egypt",
+   "g1": 1,
+   "g2": 1,
+   "pens1": null,
+   "pens2": null,
+   "status": "FT",
+   "winner": null
+  },
+  {
+   "date": "2026-06-15",
+   "round": "Matchday 5",
+   "group": "Group G",
+   "team1": "Iran",
+   "team2": "New Zealand",
+   "t1": "iran",
+   "t2": "new-zealand",
+   "g1": 2,
+   "g2": 2,
+   "pens1": null,
+   "pens2": null,
+   "status": "FT",
+   "winner": null
+  },
+  {
+   "date": "2026-06-15",
+   "round": "Matchday 5",
    "group": "Group H",
    "team1": "Spain",
    "team2": "Cape Verde",
@@ -191,6 +221,21 @@
    "t2": "cape-verde",
    "g1": 0,
    "g2": 0,
+   "pens1": null,
+   "pens2": null,
+   "status": "FT",
+   "winner": null
+  },
+  {
+   "date": "2026-06-15",
+   "round": "Matchday 5",
+   "group": "Group H",
+   "team1": "Saudi Arabia",
+   "team2": "Uruguay",
+   "t1": "saudi-arabia",
+   "t2": "uruguay",
+   "g1": 1,
+   "g2": 1,
    "pens1": null,
    "pens2": null,
    "status": "FT",
