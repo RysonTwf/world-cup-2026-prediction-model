@@ -1,5 +1,5 @@
 {
- "updated": "2026-06-16T07:24:40.764Z",
+ "updated": "2026-06-16T21:12:15.240Z",
  "matches": [
   {
    "date": "2026-06-11",
@@ -235,6 +235,21 @@
    "t1": "saudi-arabia",
    "t2": "uruguay",
    "g1": 1,
+   "g2": 1,
+   "pens1": null,
+   "pens2": null,
+   "status": "FT",
+   "winner": null
+  },
+  {
+   "date": "2026-06-16",
+   "round": "Matchday 6",
+   "group": "Group I",
+   "team1": "France",
+   "team2": "Senegal",
+   "t1": "france",
+   "t2": "senegal",
+   "g1": 3,
    "g2": 1,
    "pens1": null,
    "pens2": null,

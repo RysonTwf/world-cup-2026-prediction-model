@@ -69,10 +69,11 @@ well-calibrated estimates, and we make **no claim to beat the betting market**.
 The model's call on **every finished match** of the tournament, updated as it happens:
 
 <!-- TRACK-RECORD:START -->
-**7/16 correct picks (44%) · avg RPS 0.175** (coin-flip ≈ 0.245) · updated 2026-06-16
+**8/17 correct picks (47%) · avg RPS 0.172** (coin-flip ≈ 0.245) · updated 2026-06-16
 
 | Date | Result | Model's pick | |
 |---|---|---|---|
+| 2026-06-16 | France 3–1 Senegal | France 55% | ✅ |
 | 2026-06-15 | Saudi Arabia 1–1 Uruguay | Uruguay 56% | ❌ |
 | 2026-06-15 | Spain 0–0 Cape Verde | Spain 83% | ❌ |
 | 2026-06-15 | Iran 2–2 New Zealand | Iran 54% | ❌ |
