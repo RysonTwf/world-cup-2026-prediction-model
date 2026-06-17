@@ -1,5 +1,5 @@
 {
- "updated": "2026-06-17T00:12:20.098Z",
+ "updated": "2026-06-17T03:12:22.232Z",
  "matches": [
   {
    "date": "2026-06-11",
@@ -266,6 +266,21 @@
    "t2": "norway",
    "g1": 1,
    "g2": 4,
+   "pens1": null,
+   "pens2": null,
+   "status": "FT",
+   "winner": null
+  },
+  {
+   "date": "2026-06-16",
+   "round": "Matchday 6",
+   "group": "Group J",
+   "team1": "Argentina",
+   "team2": "Algeria",
+   "t1": "argentina",
+   "t2": "algeria",
+   "g1": 3,
+   "g2": 0,
    "pens1": null,
    "pens2": null,
    "status": "FT",
