@@ -1,5 +1,5 @@
 {
- "updated": "2026-06-17T22:12:16.055Z",
+ "updated": "2026-06-18T01:12:22.045Z",
  "matches": [
   {
    "date": "2026-06-11",
@@ -326,6 +326,21 @@
    "t2": "croatia",
    "g1": 4,
    "g2": 2,
+   "pens1": null,
+   "pens2": null,
+   "status": "FT",
+   "winner": null
+  },
+  {
+   "date": "2026-06-17",
+   "round": "Matchday 7",
+   "group": "Group L",
+   "team1": "Ghana",
+   "team2": "Panama",
+   "t1": "ghana",
+   "t2": "panama",
+   "g1": 1,
+   "g2": 0,
    "pens1": null,
    "pens2": null,
    "status": "FT",
