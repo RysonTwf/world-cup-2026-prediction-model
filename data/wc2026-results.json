@@ -1,5 +1,5 @@
 {
- "updated": "2026-06-20T05:12:17.938Z",
+ "updated": "2026-06-20T19:02:17.557Z",
  "matches": [
   {
    "date": "2026-06-11",
@@ -294,6 +294,21 @@
    "team2": "Tunisia",
    "t1": "sweden",
    "t2": "tunisia",
+   "g1": 5,
+   "g2": 1,
+   "pens1": null,
+   "pens2": null,
+   "status": "FT",
+   "winner": null
+  },
+  {
+   "date": "2026-06-20",
+   "round": "Matchday 10",
+   "group": "Group F",
+   "team1": "Netherlands",
+   "team2": "Sweden",
+   "t1": "netherlands",
+   "t2": "sweden",
    "g1": 5,
    "g2": 1,
    "pens1": null,
