@@ -20,7 +20,7 @@ const rps3 = (p, y) => 0.5 * ((p[0] - y[0]) ** 2 + (p[0] + p[1] - y[0] - y[1]) *
 let lines = [];
 let hits = 0, n = 0, rpsSum = 0;
 
-for (const m of matches) {
+for (const m of [...matches].sort((x, y) => (y.date || "").localeCompare(x.date || ""))) {
   const ra = ratings[m.t1], rb = ratings[m.t2];
   if (ra == null || rb == null) continue;
   const hb = (HOST.has(m.t1) ? HOME_ADV : 0) - (HOST.has(m.t2) ? HOME_ADV : 0);
@@ -47,7 +47,7 @@ const body = n === 0
       ``,
       `| Date | Result | Model's pick | |`,
       `|---|---|---|---|`,
-      ...lines.reverse(), // newest first
+      ...lines, // newest first (matches sorted by date desc above)
       ``,
       `_Every call is listed — hits and misses. Probabilities are the model's frozen pre-match numbers (ratings don't re-fit mid-tournament), so nothing here is retro-fitted. Reproduce with \`node track-record.mjs\`._`
     ].join("\n");
