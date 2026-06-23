@@ -69,10 +69,11 @@ well-calibrated estimates, and we make **no claim to beat the betting market**.
 The model's call on **every finished match** of the tournament, updated as it happens:
 
 <!-- TRACK-RECORD:START -->
-**26/41 correct picks (63%) · avg RPS 0.149** (coin-flip ≈ 0.245) · updated 2026-06-22
+**27/42 correct picks (64%) · avg RPS 0.146** (coin-flip ≈ 0.245) · updated 2026-06-23
 
 | Date | Result | Model's pick | |
 |---|---|---|---|
+| 2026-06-22 | France 3–0 Iraq | France 83% | ✅ |
 | 2026-06-22 | Argentina 2–0 Austria | Argentina 66% | ✅ |
 | 2026-06-21 | Belgium 0–0 Iran | Belgium 51% | ❌ |
 | 2026-06-21 | New Zealand 1–3 Egypt | Egypt 48% | ✅ |
