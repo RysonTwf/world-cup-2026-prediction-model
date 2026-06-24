@@ -58,7 +58,7 @@ const HR = (c = '─') => c.repeat(W);
 const pct  = (p, d = 1) => (p * 100).toFixed(d) + '%';
 const fair = p => (1 / p).toFixed(2);
 // "  58.3%  1.72"
-const pc = (p, pad = 6) => `${pct(p).padStart(pad)}  ${fair(p).padStart(5)}`;
+const pc = p => `${pct(p).padStart(6)}  ${fair(p).padStart(5)}`;
 
 function printMatch(fix) {
   const rA = ratings[fix.t1], rB = ratings[fix.t2];

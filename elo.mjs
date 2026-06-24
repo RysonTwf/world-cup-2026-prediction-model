@@ -1,7 +1,5 @@
 // Elo + Dixon-Coles bivariate Poisson — the match model behind https://cup26matches.com
 // References: World Football Elo; Maher (1982); Dixon & Coles (1997).
-export const K_FACTOR_WC = 60;
-
 // Dixon-Coles ρ — corrects vanilla Poisson's under-count of 0-0 / 1-1 draws. ~ -0.13 empirically.
 export const DC_RHO = -0.13;
 
