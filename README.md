@@ -157,6 +157,7 @@ node predict.mjs usa mexico usa        # 3rd arg = home team (host bonus)
 node sg-pools.mjs                      # Singapore Pools betting predictions (interactive menu)
 node sg-pools.mjs brazil scotland      # single match, all markets
 node backtest.mjs                      # reproduce the accuracy numbers
+node backtest-stakes.mjs               # dead-rubber stakes backtest (recalibrate after MD3)
 node calibrate.mjs                     # rebuild ratings from data/results.json
 ```
 
@@ -233,8 +234,9 @@ the same frozen pre-tournament ratings used everywhere else — no mid-tournamen
 | `markets.mjs` | Derives all SP betting markets from a Dixon-Coles score matrix |
 | `calibrate.mjs` | Build calibrated ratings from `data/results.json` |
 | `backtest.mjs` | Walk-forward out-of-sample evaluation (RPS, log-loss, Brier, ECE + reliability curve) |
+| `backtest-stakes.mjs` | Dead-rubber stakes backtest — re-run after MD3 to calibrate stakes penalties |
 | `predict.mjs` | CLI head-to-head predictor |
-| `sg-pools.mjs` | Singapore Pools betting predictions for all WC 2026 group stage fixtures |
+| `sg-pools.mjs` | Singapore Pools betting predictions for all WC 2026 group stage fixtures (with stakes) |
 | `track-record.mjs` | Regenerates the live 2026 track-record table in this README |
 | `data/results.json` | 913 real international results (Oct 2023 – Jun 2026) |
 | `data/elo-calibrated.json` | Calibrated Elo for 63 teams (48 finalists + 9 additional WC 2026 participants) |

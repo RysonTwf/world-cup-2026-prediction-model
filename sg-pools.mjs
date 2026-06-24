@@ -23,6 +23,56 @@ const { ratings } = JSON.parse(
 // USA, Canada, Mexico are co-hosts — get home advantage when playing.
 const HOSTS = new Set(['usa', 'mexico', 'canada']);
 
+// ── Match-stakes feature ──────────────────────────────────────────────────────
+// Stakes are derived from group standings and applied as an Elo modifier.
+// Applied to the TEAM rating only (not HOME_ADV) — the home crowd effect survives
+// rotation; the lineup quality drop is better modeled as "weaker effective rating."
+//
+// *** UNCALIBRATED PLACEHOLDER VALUES ***
+// Fit these from backtesting once MD3 results are available.
+// Reasoning: ~50 Elo ≈ 0.125 goals expected-goal shift; consistent with typical
+// rotation depth in dead-rubber group finals.
+const STAKES_SECURE = -50; // Team has 6 pts (already qualified) — likely rotating key players
+const STAKES_DEAD   = -80; // Team has 0 pts (eliminated) — playing youth/backups, no stakes
+const STAKES_LIVE   =   0; // Team still fighting — full effort assumed
+
+function buildStakesMap() {
+  let wc;
+  try {
+    wc = JSON.parse(readFileSync(new URL('./data/wc2026-results.json', import.meta.url), 'utf8'));
+  } catch {
+    return {}; // file not found — no stakes adjustment
+  }
+  const table = {};
+  for (const m of wc.matches) {
+    const g = m.group;
+    if (!table[g]) table[g] = {};
+    for (const [slug, gf, ga] of [[m.t1, m.g1, m.g2], [m.t2, m.g2, m.g1]]) {
+      if (!table[g][slug]) table[g][slug] = { pts: 0, gd: 0 };
+      const s = table[g][slug];
+      s.gd += gf - ga;
+      if (gf > ga) s.pts += 3; else if (gf === ga) s.pts += 1;
+    }
+  }
+  const map = {};
+  for (const group of Object.values(table)) {
+    const teams = Object.entries(group).sort(([,a],[,b]) => b.pts - a.pts || b.gd - a.gd);
+    for (let i = 0; i < teams.length; i++) {
+      const [slug, { pts }] = teams[i];
+      if (pts === 6) {
+        map[slug] = { label: 'SAFE',  delta: STAKES_SECURE };
+      } else if (pts === 0 && i >= 2) {
+        map[slug] = { label: 'ELIM',  delta: STAKES_DEAD   };
+      } else {
+        map[slug] = { label: 'LIVE',  delta: STAKES_LIVE   };
+      }
+    }
+  }
+  return map;
+}
+
+const STAKES_MAP = buildStakesMap();
+
 // Remaining Group Stage (MD3) fixtures — pairs not yet played as of 2026-06-24.
 const FIXTURES = [
   { group: 'A', team1: 'Mexico',          t1: 'mexico',                team2: 'Czech Republic',     t2: 'czech-republic'         },
@@ -64,10 +114,16 @@ function printMatch(fix) {
   const rA = ratings[fix.t1], rB = ratings[fix.t2];
   if (!rA || !rB) { console.error(`  [SKIP] Missing rating for ${fix.t1} or ${fix.t2}`); return; }
 
+  // Stakes adjustment (UNCALIBRATED placeholder — see STAKES_SECURE / STAKES_DEAD constants).
+  const stA = STAKES_MAP[fix.t1] ?? { label: '????', delta: 0 };
+  const stB = STAKES_MAP[fix.t2] ?? { label: '????', delta: 0 };
+  const eA = rA + stA.delta;
+  const eB = rB + stB.delta;
+
   // Home advantage: host team gets +150 Elo (single-sided — only home team's attack boosted).
   const hb = HOSTS.has(fix.t1) ? 150 : HOSTS.has(fix.t2) ? -150 : 0;
-  const lA = expectedGoals(rA, rB, hb > 0 ? hb : 0);
-  const lB = expectedGoals(rB, rA, hb < 0 ? -hb : 0);
+  const lA = expectedGoals(eA, eB, hb > 0 ? hb : 0);
+  const lB = expectedGoals(eB, eA, hb < 0 ? -hb : 0);
   const matrix = buildScoreMatrix(lA, lB);
 
   const homeTag = hb > 0 ? `  [${fix.team1} at home +150]`
@@ -75,9 +131,17 @@ function printMatch(fix) {
                 : '  [neutral]';
   const n1 = fix.team1, n2 = fix.team2;
 
+  const stakesLine = (stA.delta !== 0 || stB.delta !== 0)
+    ? `  Stakes (⚠ uncalibrated): ${n1} ${stA.label}${stA.delta ? ` (Δ${stA.delta})` : ''}  │  ${n2} ${stB.label}${stB.delta ? ` (Δ${stB.delta})` : ''}`
+    : null;
+  const eloLine = stakesLine
+    ? `  Elo (base→eff): ${n1} ${rA}→${eA}  │  ${n2} ${rB}→${eB}`
+    : `  Elo: ${n1} ${rA}  │  ${n2} ${rB}`;
+
   console.log('\n' + HR('═'));
   console.log(`  GROUP ${fix.group}  ┃  ${n1.toUpperCase()}  vs  ${n2.toUpperCase()}${homeTag}`);
-  console.log(`  Elo: ${n1} ${rA}  │  ${n2} ${rB}`);
+  console.log(eloLine);
+  if (stakesLine) console.log(stakesLine);
   console.log(`  Expected goals: ${n1} ${lA.toFixed(2)} – ${n2} ${lB.toFixed(2)}  (total ${(lA+lB).toFixed(2)})`);
   console.log(HR('═'));
 
