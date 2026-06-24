@@ -2,15 +2,15 @@
 // Walk-forward, OUT-OF-SAMPLE backtest of the model on real internationals (data/results.json).
 // Each match is predicted from ratings built ONLY on prior matches, then scored — no look-ahead.
 //   node backtest.mjs
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { matchProb, expectedScore } from "./elo.mjs";
 
 const D = (f) => new URL(`./data/${f}`, import.meta.url);
-const SEED = {
-  argentina:2085,france:2065,spain:2055,brazil:2045,england:2000,portugal:1980,netherlands:1965,germany:1945,belgium:1925,italy:1915,colombia:1890,uruguay:1875,croatia:1870,morocco:1840,switzerland:1825,usa:1830,mexico:1825,japan:1810,senegal:1795,denmark:1790,ecuador:1760,australia:1735,"south-korea":1730,iran:1720,poland:1715,canada:1700,serbia:1695,wales:1665,ghana:1665,tunisia:1655,"ivory-coast":1655,nigeria:1645,"saudi-arabia":1640,qatar:1630,egypt:1620,algeria:1615,scotland:1610,cameroon:1600,paraguay:1595,venezuela:1590,chile:1580,peru:1575,"czech-republic":1570,"bosnia-and-herzegovina":1545,"south-africa":1520,"new-zealand":1495,panama:1480,jamaica:1460,honduras:1440,jordan:1420,haiti:1380,"el-salvador":1370,"trinidad-and-tobago":1360,guatemala:1345,
-  norway:1880,sweden:1755,turkey:1740,austria:1720,iraq:1595,uzbekistan:1635,"cape-verde":1595,"dr-congo":1650,curacao:1545,
-  georgia:1530
-};
+// Seeds from 2016-2025 data (build-seeds.mjs). Fall back to flat 1500 if file missing.
+const seedsFile = D('seeds.json');
+const SEED = existsSync(seedsFile)
+  ? JSON.parse(readFileSync(seedsFile, 'utf8')).seeds
+  : {};
 const HOME_ADV = 130, BURN_IN = 150; // HOME_ADV tuned via coordinate descent
 const baseK = (n = "") => { n = n.toLowerCase();
   if (/world cup(?!.*qual)/.test(n)) return 55;
