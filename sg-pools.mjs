@@ -114,11 +114,15 @@ function printMatch(fix) {
   const rA = ratings[fix.t1], rB = ratings[fix.t2];
   if (!rA || !rB) { console.error(`  [SKIP] Missing rating for ${fix.t1} or ${fix.t2}`); return; }
 
-  // Stakes adjustment (UNCALIBRATED placeholder — see STAKES_SECURE / STAKES_DEAD constants).
+  // Stakes adjustment: DISABLED.
+  // Backtested on historical dead-rubber matches: worsens RPS on both available baselines
+  // (old-param baseline +10.4% worse, current-param baseline +4.0% worse). Placeholder
+  // values (STAKES_SECURE/STAKES_DEAD) remain in place. Re-enable after WC 2026 MD3
+  // calibration by restoring: eA = rA + stA.delta  /  eB = rB + stB.delta
   const stA = STAKES_MAP[fix.t1] ?? { label: '????', delta: 0 };
   const stB = STAKES_MAP[fix.t2] ?? { label: '????', delta: 0 };
-  const eA = rA + stA.delta;
-  const eB = rB + stB.delta;
+  const eA = rA;  // stakes disabled — was: rA + stA.delta
+  const eB = rB;  // stakes disabled — was: rB + stB.delta
 
   // Home advantage: host team gets +150 Elo (single-sided — only home team's attack boosted).
   const hb = HOSTS.has(fix.t1) ? 150 : HOSTS.has(fix.t2) ? -150 : 0;
@@ -131,19 +135,15 @@ function printMatch(fix) {
                 : '  [neutral]';
   const n1 = fix.team1, n2 = fix.team2;
 
-  const stakesLine = (stA.delta !== 0 || stB.delta !== 0)
-    ? `  Stakes (⚠ uncalibrated): ${n1} ${stA.label}${stA.delta ? ` (Δ${stA.delta})` : ''}  │  ${n2} ${stB.label}${stB.delta ? ` (Δ${stB.delta})` : ''}`
-    : null;
-  const eloLine = stakesLine
-    ? `  Elo (base→eff): ${n1} ${rA}→${eA}  │  ${n2} ${rB}→${eB}`
-    : `  Elo: ${n1} ${rA}  │  ${n2} ${rB}`;
+  const eloLine = `  Elo: ${n1} ${rA}  |  ${n2} ${rB}`;
+  const rotationNote = '  Rotation/lineup risk: NOT MODELED (stakes adjustment disabled — pending MD3 calibration)';
 
-  console.log('\n' + HR('═'));
-  console.log(`  GROUP ${fix.group}  ┃  ${n1.toUpperCase()}  vs  ${n2.toUpperCase()}${homeTag}`);
+  console.log('\n' + HR('='));
+  console.log(`  GROUP ${fix.group}  |  ${n1.toUpperCase()}  vs  ${n2.toUpperCase()}${homeTag}`);
   console.log(eloLine);
-  if (stakesLine) console.log(stakesLine);
+  console.log(rotationNote);
   console.log(`  Expected goals: ${n1} ${lA.toFixed(2)} – ${n2} ${lB.toFixed(2)}  (total ${(lA+lB).toFixed(2)})`);
-  console.log(HR('═'));
+  console.log(HR('='));
 
   // ── 1X2 + HT Result ────────────────────────────────────────────────────────
   const r  = market1X2(matrix);
