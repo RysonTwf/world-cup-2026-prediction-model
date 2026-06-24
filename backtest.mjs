@@ -11,7 +11,7 @@ const SEED = {
   norway:1880,sweden:1755,turkey:1740,austria:1720,iraq:1595,uzbekistan:1635,"cape-verde":1595,"dr-congo":1650,curacao:1545,
   georgia:1530
 };
-const HOME_ADV = 150, BURN_IN = 150;
+const HOME_ADV = 130, BURN_IN = 150; // HOME_ADV tuned via coordinate descent
 const baseK = (n = "") => { n = n.toLowerCase();
   if (/world cup(?!.*qual)/.test(n)) return 55;
   if (/world cup.*qual|qualification/.test(n)) return 40;

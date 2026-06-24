@@ -13,7 +13,7 @@ const SEED = {
   georgia:1530
 };
 const HOST = new Set(["mexico", "usa", "canada"]);
-const HOME_ADV = 150;
+const HOME_ADV = 130; // tuned via coordinate descent on walk-forward RPS
 
 // Match-importance K-factor by competition.
 function baseK(leagueName = "") {

@@ -18,7 +18,7 @@ if (ra == null || rb == null) {
   console.error(`Unknown team: ${ra == null ? a : b}\nAvailable: ${Object.keys(ratings).sort().join(", ")}`);
   process.exit(1);
 }
-const hb = home === a ? 150 : home === b ? -150 : 0;
+const hb = home === a ? 130 : home === b ? -130 : 0;
 const p = matchProb(ra, rb, hb);
 const bar = (x) => "█".repeat(Math.round(x * 30));
 

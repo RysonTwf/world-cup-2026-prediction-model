@@ -124,14 +124,14 @@ function printMatch(fix) {
   const eA = rA;  // stakes disabled — was: rA + stA.delta
   const eB = rB;  // stakes disabled — was: rB + stB.delta
 
-  // Home advantage: host team gets +150 Elo (single-sided — only home team's attack boosted).
-  const hb = HOSTS.has(fix.t1) ? 150 : HOSTS.has(fix.t2) ? -150 : 0;
+  // Home advantage: host team gets +130 Elo (single-sided — only home team's attack boosted).
+  const hb = HOSTS.has(fix.t1) ? 130 : HOSTS.has(fix.t2) ? -130 : 0;
   const lA = expectedGoals(eA, eB, hb > 0 ? hb : 0);
   const lB = expectedGoals(eB, eA, hb < 0 ? -hb : 0);
   const matrix = buildScoreMatrix(lA, lB);
 
-  const homeTag = hb > 0 ? `  [${fix.team1} at home +150]`
-                : hb < 0 ? `  [${fix.team2} at home +150]`
+  const homeTag = hb > 0 ? `  [${fix.team1} at home +130]`
+                : hb < 0 ? `  [${fix.team2} at home +130]`
                 : '  [neutral]';
   const n1 = fix.team1, n2 = fix.team2;
 
