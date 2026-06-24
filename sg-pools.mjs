@@ -8,7 +8,8 @@
 // Enrichment pipeline (run in order before sg-pools.mjs):
 //   node live-ratings.mjs                   → data/elo-live.json  (in-tournament Elo updates)
 //   node fetch-lineups.mjs                  → data/lineups-cache.json  (needs RAPIDAPI_KEY)
-//   node sg-pools.mjs                       → picks up both files automatically
+//   node fetch-sp-odds.mjs                  → data/sp-odds.json   (run on your local machine)
+//   node sg-pools.mjs                       → picks up all three files automatically
 import { readFileSync, existsSync } from 'node:fs';
 import { expectedGoals } from './elo.mjs';
 import {
@@ -43,6 +44,34 @@ const lineupData   = existsSync(lineupFile)
   ? JSON.parse(readFileSync(lineupFile, 'utf8')) : null;
 if (lineupData) console.log(`[lineups]  Lineup cache loaded (fetched ${lineupData.fetchedAt?.slice(0,16) ?? '?'}).`);
 else            console.log('[lineups]  No lineup cache. Run node fetch-lineups.mjs (needs RAPIDAPI_KEY) for player-level adjustments.');
+
+// ── SP odds cache (from fetch-sp-odds.mjs — run on local machine) ────────────
+const spOddsFile = new URL('./data/sp-odds.json', import.meta.url);
+const spOddsData = existsSync(spOddsFile)
+  ? JSON.parse(readFileSync(spOddsFile, 'utf8')) : null;
+if (spOddsData) console.log(`[SP odds]  Live SP odds loaded (fetched ${spOddsData.fetchedAt?.slice(0,16) ?? '?'}).`);
+else            console.log('[SP odds]  No SP odds cache. Run node fetch-sp-odds.mjs on your local machine.');
+
+// Look up SP 1X2 odds for a fixture by team name fragments.
+function spOddsFor(team1Name, team2Name) {
+  if (!spOddsData?.odds?.length) return null;
+  const n1 = team1Name.toLowerCase(), n2 = team2Name.toLowerCase();
+  const match = spOddsData.odds.find(o => {
+    const h = (o.home ?? '').toLowerCase(), a = (o.away ?? '').toLowerCase();
+    // Match if both team name fragments appear in home/away (either order)
+    return (h.includes(n1.split(' ')[0]) || h.includes(n1.split('-')[0])) &&
+           (a.includes(n2.split(' ')[0]) || a.includes(n2.split('-')[0])) ||
+           (h.includes(n2.split(' ')[0]) || h.includes(n2.split('-')[0])) &&
+           (a.includes(n1.split(' ')[0]) || a.includes(n1.split('-')[0]));
+  });
+  if (!match?.odds1x2) return null;
+  // Normalise so home=team1, away=team2
+  const h = (match.home ?? '').toLowerCase();
+  const flipped = h.includes(n2.split(' ')[0]) || h.includes(n2.split('-')[0]);
+  return flipped
+    ? { h: match.odds1x2.away, d: match.odds1x2.draw, a: match.odds1x2.home }
+    : match.odds1x2;
+}
 
 // ── Player-impact table ───────────────────────────────────────────────────────
 const playerImpacts = JSON.parse(
@@ -374,12 +403,19 @@ function printMatch(fix, showEV = false) {
   console.log(`  ${'─'.repeat(W)}`);
   console.log('');
 
+  // Auto EV check if SP odds are loaded from sp-odds.json
+  const autoSP = spOddsFor(n1, n2);
+  if (autoSP?.h && autoSP?.d && autoSP?.a) {
+    printEV({ r, n1, n2 }, autoSP, /* auto= */ true);
+  }
+
   return { r, ou25, ahHalf, btts, favA, n1, n2, fav, dog };
 }
 
 // ── EV display helper ─────────────────────────────────────────────────────────
 // spOdds = { h: decimal, d: decimal, a: decimal }
-function printEV(matchResult, spOdds) {
+// auto=true when odds are pulled from sp-odds.json (vs manually entered)
+function printEV(matchResult, spOdds, auto = false) {
   if (!matchResult || !spOdds) return;
   const { r, n1, n2 } = matchResult;
   const evH = r.w1 * spOdds.h - 1;
@@ -387,17 +423,18 @@ function printEV(matchResult, spOdds) {
   const evA = r.w2 * spOdds.a - 1;
   const fmt  = ev => (ev >= 0 ? '+' : '') + (ev * 100).toFixed(1) + '%';
   const flag = ev => ev > 0.02 ? '  ◄ +EV' : ev > 0 ? '  ◄ marginal' : '';
+  const label = auto ? 'LIVE SP ODDS — EV CHECK' : 'EV CHECK  (SP odds entered)';
 
-  console.log(`\n  EV CHECK  (SP odds you entered)`);
+  console.log(`\n  ${label}`);
   console.log('─'.repeat(W));
-  console.log(`  ${n1} Win    SP ${spOdds.h.toFixed(2)}  fair ${fair(r.w1)}   EV ${fmt(evH)}${flag(evH)}`);
-  console.log(`  Draw         SP ${spOdds.d.toFixed(2)}  fair ${fair(r.d)}   EV ${fmt(evD)}${flag(evD)}`);
-  console.log(`  ${n2} Win    SP ${spOdds.a.toFixed(2)}  fair ${fair(r.w2)}   EV ${fmt(evA)}${flag(evA)}`);
+  console.log(`  ${n1.padEnd(20)} SP ${String(spOdds.h.toFixed(2)).padStart(5)}   fair ${fair(r.w1).padStart(5)}   EV ${fmt(evH)}${flag(evH)}`);
+  console.log(`  ${'Draw'.padEnd(20)} SP ${String(spOdds.d.toFixed(2)).padStart(5)}   fair ${fair(r.d).padStart(5)}   EV ${fmt(evD)}${flag(evD)}`);
+  console.log(`  ${n2.padEnd(20)} SP ${String(spOdds.a.toFixed(2)).padStart(5)}   fair ${fair(r.w2).padStart(5)}   EV ${fmt(evA)}${flag(evA)}`);
   const best = [['1', evH], ['X', evD], ['2', evA]].filter(([, e]) => e > 0);
   if (best.length === 0) {
-    console.log(`\n  No +EV on 1X2. Model sees no edge at these SP prices.`);
+    console.log(`\n  No +EV on 1X2 at these SP prices.`);
   } else {
-    console.log(`\n  Best bet: ${best.map(([k]) => k).join(' / ')} has positive EV at current SP prices.`);
+    console.log(`\n  ★  Best bet: ${best.map(([k]) => k).join(' / ')} has positive EV at current SP prices.`);
   }
   console.log('');
 }
