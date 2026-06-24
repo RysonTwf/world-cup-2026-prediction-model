@@ -216,7 +216,9 @@ the same frozen pre-tournament ratings used everywhere else — no mid-tournamen
    friendlies, and recent form outweighs old form. See [`calibrate.mjs`](./calibrate.mjs).
 2. **Each match (Dixon-Coles Poisson).** Ratings → expected goals → a Dixon-Coles bivariate
    Poisson gives win/draw/loss probabilities. The Dixon-Coles correction fixes plain Poisson's
-   well-known under-count of low-scoring draws (0-0, 1-1). See [`elo.mjs`](./elo.mjs).
+   well-known under-count of low-scoring draws (0-0, 1-1). Home advantage is applied
+   single-sided (only the home team's attack rate is boosted; `HOME_ADV = 150`, fitted by
+   minimising walk-forward RPS on 763 out-of-sample matches). See [`elo.mjs`](./elo.mjs).
 3. **The tournament (Monte Carlo).** The live site plays all 104 matches **50,000 times** through
    the real bracket to get championship & advancement odds — and, now the tournament is underway,
    **locks every finished result** (real standings, real qualifiers, real bracket slots) and
@@ -235,7 +237,7 @@ the same frozen pre-tournament ratings used everywhere else — no mid-tournamen
 | `sg-pools.mjs` | Singapore Pools betting predictions for all WC 2026 group stage fixtures |
 | `track-record.mjs` | Regenerates the live 2026 track-record table in this README |
 | `data/results.json` | 913 real international results (Oct 2023 – Jun 2026) |
-| `data/elo-calibrated.json` | Calibrated Elo for the 48 finalists |
+| `data/elo-calibrated.json` | Calibrated Elo for 63 teams (48 finalists + 9 additional WC 2026 participants) |
 | `data/wc2026-results.json` | Finished 2026 World Cup matches (feeds the track record) |
 | `data/model-backtest.json` | Saved backtest metrics |
 
