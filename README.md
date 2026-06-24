@@ -156,11 +156,13 @@ cd world-cup-2026-prediction-model
 
 node predict.mjs brazil argentina      # head-to-head probabilities
 node predict.mjs usa mexico usa        # 3rd arg = home team (host bonus)
+node sg-pools.mjs                      # Singapore Pools betting predictions (interactive menu)
+node sg-pools.mjs brazil scotland      # single match, all markets
 node backtest.mjs                      # reproduce the accuracy numbers
 node calibrate.mjs                     # rebuild ratings from data/results.json
 ```
 
-Example:
+Example — head-to-head:
 
 ```
 $ node predict.mjs spain germany
@@ -171,6 +173,43 @@ $ node predict.mjs spain germany
   draw                   26.8%  ████████
   germany          win   20.0%  ██████
 ```
+
+## Singapore Pools betting predictions
+
+`sg-pools.mjs` derives **every common SP market** from the same Dixon-Coles score matrix used
+for the match probabilities. Run it with no arguments for an interactive match picker:
+
+```
+$ node sg-pools.mjs
+
+   1.  Group A  Mexico vs Czech Republic ⌂
+   2.  Group A  South Korea vs South Africa
+   ...
+  24.  Group L  Ghana vs Croatia
+   0.  Show all matches
+
+  Select a match (0–24):
+```
+
+Each match outputs fair decimal odds (1 ÷ probability, **no bookmaker margin**) across:
+
+| Market | Detail |
+|---|---|
+| 1X2 + Half-Time 1X2 | Win / Draw / Win |
+| Asian Handicap | ±0.5, ±1.0, ±1.5, ±2.0, ±2.5 — push shown for whole-number lines |
+| Handicap 1X2 | 3-way with explicit draw option |
+| Over / Under | Full-match 0.5 → 4.5 · Half-time 0.5 → 2.5 |
+| Total Goals bands | 0–1 / 2–3 / 4+ |
+| BTTS | Both Teams to Score Yes / No |
+| Odd / Even | Total goals |
+| Team to Score First | Team A / Team B / No Goal |
+| Half-Time / Full-Time | All 9 HT/FT combinations, sorted by probability |
+| Which Half More Goals | 1st / Equal / 2nd |
+| 2nd Half Result | Win / Draw / Win |
+| Correct Score | Top 12 scorelines with fair odds |
+
+Compare these numbers against SP's published lines to spot value bets. The probabilities are
+the same frozen pre-tournament ratings used everywhere else — no mid-tournament re-fitting.
 
 ## How it works
 
@@ -191,9 +230,11 @@ $ node predict.mjs spain germany
 | File | What |
 |---|---|
 | `elo.mjs` | The match model — Elo, Dixon-Coles τ, Poisson, `matchProb`, `sampleMatch` |
+| `markets.mjs` | Derives all SP betting markets from a Dixon-Coles score matrix |
 | `calibrate.mjs` | Build calibrated ratings from `data/results.json` |
 | `backtest.mjs` | Walk-forward out-of-sample evaluation (RPS, log-loss, Brier, ECE + reliability curve) |
 | `predict.mjs` | CLI head-to-head predictor |
+| `sg-pools.mjs` | Singapore Pools betting predictions for all WC 2026 group stage fixtures |
 | `track-record.mjs` | Regenerates the live 2026 track-record table in this README |
 | `data/results.json` | 913 real international results (Oct 2023 – Jun 2026) |
 | `data/elo-calibrated.json` | Calibrated Elo for the 48 finalists |
