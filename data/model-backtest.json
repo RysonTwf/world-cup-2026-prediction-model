@@ -1,29 +1,29 @@
 {
-  "generatedAt": "2026-06-24T11:00:37.484Z",
+  "generatedAt": "2026-06-24T11:59:03.749Z",
   "method": "Walk-forward out-of-sample: each match predicted from ratings built only on prior matches; Elo updated after. Burn-in skipped.",
-  "totalMatches": 913,
-  "evaluated": 763,
+  "totalMatches": 961,
+  "evaluated": 811,
   "burnIn": 150,
   "outcomeSplit": {
-    "home": 0.4915,
-    "draw": 0.2228,
-    "away": 0.2857
+    "home": 0.4932,
+    "draw": 0.2269,
+    "away": 0.2799
   },
   "model": {
-    "accuracy": 0.6173,
-    "brier": 0.5095,
-    "logloss": 0.8686,
-    "rps": 0.1697,
-    "ece": 0.0124,
-    "favouriteAccuracy": 0.6898,
-    "favouriteCount": 532
+    "accuracy": 0.619,
+    "brier": 0.5102,
+    "logloss": 0.8689,
+    "rps": 0.1687,
+    "ece": 0.0114,
+    "favouriteAccuracy": 0.6878,
+    "favouriteCount": 567
   },
   "baselines": {
-    "alwaysHome": 0.4915,
-    "eloPickNoDraw": 0.5898,
+    "alwaysHome": 0.4932,
+    "eloPickNoDraw": 0.5919,
     "uniformBrier": 0.6667,
     "uniformLogloss": 1.0986,
-    "uniformRps": 0.2406
+    "uniformRps": 0.24
   },
   "calibration": {
     "bins": [
@@ -32,81 +32,81 @@
           0,
           0.1
         ],
-        "n": 254,
-        "avgPred": 0.0571,
-        "obsFreq": 0.0551
+        "n": 267,
+        "avgPred": 0.0573,
+        "obsFreq": 0.0562
       },
       {
         "range": [
           0.1,
           0.2
         ],
-        "n": 433,
-        "avgPred": 0.154,
-        "obsFreq": 0.1524
+        "n": 461,
+        "avgPred": 0.1544,
+        "obsFreq": 0.1475
       },
       {
         "range": [
           0.2,
           0.3
         ],
-        "n": 720,
-        "avgPred": 0.2468,
-        "obsFreq": 0.2403
+        "n": 767,
+        "avgPred": 0.2466,
+        "obsFreq": 0.2412
       },
       {
         "range": [
           0.3,
           0.4
         ],
-        "n": 194,
-        "avgPred": 0.3544,
-        "obsFreq": 0.3454
+        "n": 206,
+        "avgPred": 0.3541,
+        "obsFreq": 0.3447
       },
       {
         "range": [
           0.4,
           0.5
         ],
-        "n": 156,
-        "avgPred": 0.4542,
-        "obsFreq": 0.4872
+        "n": 165,
+        "avgPred": 0.4538,
+        "obsFreq": 0.497
       },
       {
         "range": [
           0.5,
           0.6
         ],
-        "n": 154,
-        "avgPred": 0.5519,
-        "obsFreq": 0.5325
+        "n": 167,
+        "avgPred": 0.5527,
+        "obsFreq": 0.5389
       },
       {
         "range": [
           0.6,
           0.7
         ],
-        "n": 154,
-        "avgPred": 0.6514,
-        "obsFreq": 0.6948
+        "n": 165,
+        "avgPred": 0.6503,
+        "obsFreq": 0.6848
       },
       {
         "range": [
           0.7,
           0.8
         ],
-        "n": 115,
-        "avgPred": 0.7442,
-        "obsFreq": 0.713
+        "n": 121,
+        "avgPred": 0.7439,
+        "obsFreq": 0.7273
       },
       {
         "range": [
           0.8,
           0.9
         ],
-        "n": 96,
-        "avgPred": 0.8529,
-        "obsFreq": 0.875
+        "n": 101,
+        "avgPred": 0.8535,
+        "obsFreq": 0.8614
       },
       {
         "range": [
@@ -118,6 +118,6 @@
         "obsFreq": 0.9231
       }
     ],
-    "ece": 0.0124
+    "ece": 0.0114
   }
 }
