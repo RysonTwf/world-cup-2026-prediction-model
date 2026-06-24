@@ -4,7 +4,12 @@
 //   node sg-pools.mjs                        → all upcoming group-stage MD3 fixtures
 //   node sg-pools.mjs brazil scotland        → single fixture (neutral)
 //   node sg-pools.mjs usa turkey usa         → single fixture with home advantage
-import { readFileSync } from 'node:fs';
+//
+// Enrichment pipeline (run in order before sg-pools.mjs):
+//   node live-ratings.mjs                   → data/elo-live.json  (in-tournament Elo updates)
+//   node fetch-lineups.mjs                  → data/lineups-cache.json  (needs RAPIDAPI_KEY)
+//   node sg-pools.mjs                       → picks up both files automatically
+import { readFileSync, existsSync } from 'node:fs';
 import { expectedGoals } from './elo.mjs';
 import {
   buildScoreMatrix,
@@ -16,9 +21,64 @@ import {
   marketWhichHalf, marketFirstTeam,
 } from './markets.mjs';
 
-const { ratings } = JSON.parse(
-  readFileSync(new URL('./data/elo-calibrated.json', import.meta.url), 'utf8')
+// ── Rating source: prefer live (in-tournament) over frozen ────────────────────
+const liveFile   = new URL('./data/elo-live.json',       import.meta.url);
+const frozenFile = new URL('./data/elo-calibrated.json', import.meta.url);
+const usingLive  = existsSync(liveFile);
+const ratingData = JSON.parse(readFileSync(usingLive ? liveFile : frozenFile, 'utf8'));
+const ratings    = ratingData.ratings;
+const frozenRatings = usingLive
+  ? JSON.parse(readFileSync(frozenFile, 'utf8')).ratings
+  : ratings;
+if (usingLive) {
+  const n = ratingData.matchesApplied ?? '?';
+  console.log(`\n[live-ratings] Using in-tournament Elo (${n} WC matches applied).`);
+} else {
+  console.log('\n[ratings] Using frozen pre-tournament Elo. Run node live-ratings.mjs for in-tournament updates.');
+}
+
+// ── Lineup cache (from fetch-lineups.mjs) ────────────────────────────────────
+const lineupFile   = new URL('./data/lineups-cache.json', import.meta.url);
+const lineupData   = existsSync(lineupFile)
+  ? JSON.parse(readFileSync(lineupFile, 'utf8')) : null;
+if (lineupData) console.log(`[lineups]  Lineup cache loaded (fetched ${lineupData.fetchedAt?.slice(0,16) ?? '?'}).`);
+else            console.log('[lineups]  No lineup cache. Run node fetch-lineups.mjs (needs RAPIDAPI_KEY) for player-level adjustments.');
+
+// ── Player-impact table ───────────────────────────────────────────────────────
+const playerImpacts = JSON.parse(
+  readFileSync(new URL('./data/player-impacts.json', import.meta.url), 'utf8')
 );
+
+// Compute lineup Elo adjustment for a team from cached data.
+// Returns { delta, reasons[] } — delta is negative (team is weaker without key players).
+function lineupAdjustment(slug, sideKey, fixtureEntry) {
+  if (!fixtureEntry || !playerImpacts[slug]) return { delta: 0, reasons: [] };
+  const impacts = playerImpacts[slug];
+  const reasons = [];
+
+  if (fixtureEntry.confirmedLineups && fixtureEntry.starters[sideKey]?.length) {
+    // Compare expected key players to confirmed starters
+    const starters = fixtureEntry.starters[sideKey].map(n => n.toLowerCase());
+    for (const [player, impact] of Object.entries(impacts)) {
+      const inXI = starters.some(s => s.includes(player.split(' ').pop().toLowerCase()));
+      if (!inXI) reasons.push({ player, impact, source: 'lineup' });
+    }
+  }
+
+  // Add injury/suspension absentees (may overlap with lineup — deduplicate)
+  for (const absentee of (fixtureEntry.absentees?.[sideKey] ?? [])) {
+    const n = absentee.player.toLowerCase();
+    for (const [player, impact] of Object.entries(impacts)) {
+      const alreadyListed = reasons.some(r => r.player === player);
+      if (!alreadyListed && n.includes(player.split(' ').pop().toLowerCase())) {
+        reasons.push({ player, impact, source: absentee.type });
+      }
+    }
+  }
+
+  const delta = -reasons.reduce((s, r) => s + r.impact, 0);
+  return { delta, reasons };
+}
 
 // USA, Canada, Mexico are co-hosts — get home advantage when playing.
 const HOSTS = new Set(['usa', 'mexico', 'canada']);
@@ -110,19 +170,20 @@ const fair = p => (1 / p).toFixed(2);
 // "  58.3%  1.72"
 const pc = p => `${pct(p).padStart(6)}  ${fair(p).padStart(5)}`;
 
-function printMatch(fix) {
+function printMatch(fix, showEV = false) {
   const rA = ratings[fix.t1], rB = ratings[fix.t2];
-  if (!rA || !rB) { console.error(`  [SKIP] Missing rating for ${fix.t1} or ${fix.t2}`); return; }
+  if (!rA || !rB) { console.error(`  [SKIP] Missing rating for ${fix.t1} or ${fix.t2}`); return null; }
 
-  // Stakes adjustment: DISABLED.
-  // Backtested on historical dead-rubber matches: worsens RPS on both available baselines
-  // (old-param baseline +10.4% worse, current-param baseline +4.0% worse). Placeholder
-  // values (STAKES_SECURE/STAKES_DEAD) remain in place. Re-enable after WC 2026 MD3
-  // calibration by restoring: eA = rA + stA.delta  /  eB = rB + stB.delta
-  const stA = STAKES_MAP[fix.t1] ?? { label: '????', delta: 0 };
-  const stB = STAKES_MAP[fix.t2] ?? { label: '????', delta: 0 };
-  const eA = rA;  // stakes disabled — was: rA + stA.delta
-  const eB = rB;  // stakes disabled — was: rB + stB.delta
+  // ── Lineup adjustment from fetch-lineups.mjs data ────────────────────────
+  const fixtureEntry = lineupData?.matches?.find(
+    m => (m.homeSlug === fix.t1 && m.awaySlug === fix.t2) ||
+         (m.homeSlug === fix.t2 && m.awaySlug === fix.t1)
+  );
+  const adjA = lineupAdjustment(fix.t1, fixtureEntry?.homeSlug === fix.t1 ? 'home' : 'away', fixtureEntry);
+  const adjB = lineupAdjustment(fix.t2, fixtureEntry?.homeSlug === fix.t2 ? 'home' : 'away', fixtureEntry);
+
+  const eA = rA + adjA.delta;
+  const eB = rB + adjB.delta;
 
   // Home advantage: host team gets +130 Elo (single-sided — only home team's attack boosted).
   const hb = HOSTS.has(fix.t1) ? 130 : HOSTS.has(fix.t2) ? -130 : 0;
@@ -135,13 +196,31 @@ function printMatch(fix) {
                 : '  [neutral]';
   const n1 = fix.team1, n2 = fix.team2;
 
-  const eloLine = `  Elo: ${n1} ${rA}  |  ${n2} ${rB}`;
-  const rotationNote = '  Rotation/lineup risk: NOT MODELED (stakes adjustment disabled — pending MD3 calibration)';
+  // Rating display — show frozen → live delta if live ratings are active
+  const fA = frozenRatings[fix.t1] ?? rA;
+  const fB = frozenRatings[fix.t2] ?? rB;
+  const deltaA = rA - fA, deltaB = rB - fB;
+  const fmtDelta = d => d === 0 ? '' : ` (${d > 0 ? '+' : ''}${Math.round(d)} WC form)`;
+  const eloLine = `  Elo: ${n1} ${rA}${fmtDelta(deltaA)}  |  ${n2} ${rB}${fmtDelta(deltaB)}`;
 
   console.log('\n' + HR('='));
   console.log(`  GROUP ${fix.group}  |  ${n1.toUpperCase()}  vs  ${n2.toUpperCase()}${homeTag}`);
   console.log(eloLine);
-  console.log(rotationNote);
+
+  // Lineup adjustment notes
+  if (adjA.reasons.length || adjB.reasons.length) {
+    console.log('  Player absences:');
+    for (const r of adjA.reasons) console.log(`    ${n1}: ${r.player} absent (${r.source}) → −${r.impact} Elo`);
+    for (const r of adjB.reasons) console.log(`    ${n2}: ${r.player} absent (${r.source}) → −${r.impact} Elo`);
+    const effLine = [];
+    if (adjA.delta) effLine.push(`${n1} effective ${eA}`);
+    if (adjB.delta) effLine.push(`${n2} effective ${eB}`);
+    if (effLine.length) console.log(`  → Effective: ${effLine.join('  |  ')}`);
+  } else if (fixtureEntry?.confirmedLineups) {
+    console.log('  Lineups confirmed — all key players present.');
+  } else {
+    console.log('  Lineups: not yet announced (run node fetch-lineups.mjs closer to kickoff).');
+  }
   console.log(`  Expected goals: ${n1} ${lA.toFixed(2)} – ${n2} ${lB.toFixed(2)}  (total ${(lA+lB).toFixed(2)})`);
   console.log(HR('='));
 
@@ -282,6 +361,44 @@ function printMatch(fix) {
     console.log(`  ${row}`);
   }
 
+  // ── Fair Odds Summary — key markets at a glance ────────────────────────
+  const ou25 = marketOU(matrix, 2.5);
+  console.log(`\n  ${'─'.repeat(W)}`);
+  console.log(`  FAIR ODDS QUICK REFERENCE  (beat these to have edge)`);
+  console.log(`  ${'─'.repeat(W)}`);
+  console.log(`  1X2 :  ${n1} @ ${fair(r.w1).padEnd(6)}  Draw @ ${fair(r.d).padEnd(6)}  ${n2} @ ${fair(r.w2)}`);
+  const ahHalf = marketAH(matrix, favA ? -0.5 : 0.5);
+  console.log(`  AH  :  ${fav} -0.5 @ ${fair(favA ? ahHalf.winA : ahHalf.winB).padEnd(6)}  ${dog} +0.5 @ ${fair(favA ? ahHalf.winB : ahHalf.winA)}`);
+  console.log(`  O/U :  Over 2.5 @ ${fair(ou25.over).padEnd(6)}  Under 2.5 @ ${fair(ou25.under)}`);
+  console.log(`  BTTS:  Yes @ ${fair(btts.yes).padEnd(6)}  No @ ${fair(btts.no)}`);
+  console.log(`  ${'─'.repeat(W)}`);
+  console.log('');
+
+  return { r, ou25, ahHalf, btts, favA, n1, n2, fav, dog };
+}
+
+// ── EV display helper ─────────────────────────────────────────────────────────
+// spOdds = { h: decimal, d: decimal, a: decimal }
+function printEV(matchResult, spOdds) {
+  if (!matchResult || !spOdds) return;
+  const { r, n1, n2 } = matchResult;
+  const evH = r.w1 * spOdds.h - 1;
+  const evD = r.d  * spOdds.d - 1;
+  const evA = r.w2 * spOdds.a - 1;
+  const fmt  = ev => (ev >= 0 ? '+' : '') + (ev * 100).toFixed(1) + '%';
+  const flag = ev => ev > 0.02 ? '  ◄ +EV' : ev > 0 ? '  ◄ marginal' : '';
+
+  console.log(`\n  EV CHECK  (SP odds you entered)`);
+  console.log('─'.repeat(W));
+  console.log(`  ${n1} Win    SP ${spOdds.h.toFixed(2)}  fair ${fair(r.w1)}   EV ${fmt(evH)}${flag(evH)}`);
+  console.log(`  Draw         SP ${spOdds.d.toFixed(2)}  fair ${fair(r.d)}   EV ${fmt(evD)}${flag(evD)}`);
+  console.log(`  ${n2} Win    SP ${spOdds.a.toFixed(2)}  fair ${fair(r.w2)}   EV ${fmt(evA)}${flag(evA)}`);
+  const best = [['1', evH], ['X', evD], ['2', evA]].filter(([, e]) => e > 0);
+  if (best.length === 0) {
+    console.log(`\n  No +EV on 1X2. Model sees no edge at these SP prices.`);
+  } else {
+    console.log(`\n  Best bet: ${best.map(([k]) => k).join(' / ')} has positive EV at current SP prices.`);
+  }
   console.log('');
 }
 
@@ -321,13 +438,21 @@ async function pickAndShow() {
     if (!isNaN(n) && n >= 0 && n <= FIXTURES.length) { choice = n; break; }
     console.log('  Please enter a number between 0 and ' + FIXTURES.length);
   }
-  rl.close();
 
   console.log('');
   if (choice === 0) {
+    rl.close();
     FIXTURES.forEach(printMatch);
   } else {
-    printMatch(FIXTURES[choice - 1]);
+    const result = printMatch(FIXTURES[choice - 1]);
+    const raw = await ask('  Enter SP decimal odds for EV check  (e.g.  1.65 3.80 4.20)  or Enter to skip: ');
+    rl.close();
+    const parts = raw.trim().split(/\s+/).map(Number).filter(n => n > 1);
+    if (parts.length >= 3) {
+      printEV(result, { h: parts[0], d: parts[1], a: parts[2] });
+    } else if (raw.trim()) {
+      console.log('  Need 3 numbers > 1 (home draw away). Skipping EV check.\n');
+    }
   }
 }
 
@@ -336,23 +461,36 @@ const args = process.argv.slice(2);
 if (args.length === 0) {
   pickAndShow();
 } else if (args.length >= 2) {
-  const [t1slug, t2slug, homeSlug] = args;
+  // Parse --sp h d a anywhere in args
+  const spIdx = args.indexOf('--sp');
+  let spOdds = null;
+  let cleanArgs = args;
+  if (spIdx !== -1) {
+    const odds = args.slice(spIdx + 1, spIdx + 4).map(Number);
+    if (odds.length === 3 && odds.every(n => n > 1)) {
+      spOdds = { h: odds[0], d: odds[1], a: odds[2] };
+    }
+    cleanArgs = args.filter((_, i) => i < spIdx || i > spIdx + 3);
+  }
+
+  const [t1slug, t2slug, homeSlug] = cleanArgs;
   if (!ratings[t1slug] || !ratings[t2slug]) {
     console.error(`Unknown slug(s). Available:\n  ${Object.keys(ratings).sort().join(', ')}`);
     process.exit(1);
   }
   const label = s => s.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-  // If a 3rd arg is given, override the host set so home advantage resolves correctly.
   if (homeSlug === t1slug)      { HOSTS.add(t1slug); HOSTS.delete(t2slug); }
   else if (homeSlug === t2slug) { HOSTS.add(t2slug); HOSTS.delete(t1slug); }
-  else if (homeSlug)            { HOSTS.clear(); }           // explicit neutral
+  else if (homeSlug)            { HOSTS.clear(); }
   const fix = FIXTURES.find(f => f.t1 === t1slug && f.t2 === t2slug)
            ?? { group: '?', team1: label(t1slug), t1: t1slug, team2: label(t2slug), t2: t2slug };
-  printMatch(fix);
+  const result = printMatch(fix);
+  if (spOdds) printEV(result, spOdds);
 } else {
   console.log('Usage:');
-  console.log('  node sg-pools.mjs                         → all MD3 group fixtures');
-  console.log('  node sg-pools.mjs <team1> <team2>         → single match (neutral)');
-  console.log('  node sg-pools.mjs <team1> <team2> <home>  → with home advantage');
+  console.log('  node sg-pools.mjs                             → interactive match picker');
+  console.log('  node sg-pools.mjs <team1> <team2>             → single match (neutral)');
+  console.log('  node sg-pools.mjs <team1> <team2> <home>      → with home advantage');
+  console.log('  node sg-pools.mjs <team1> <team2> --sp h d a  → + EV check vs SP odds');
   console.log(`\nSlugs: ${Object.keys(ratings).sort().join(', ')}`);
 }
