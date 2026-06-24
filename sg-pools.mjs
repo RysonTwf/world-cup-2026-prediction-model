@@ -223,18 +223,54 @@ function printMatch(fix) {
 
 // ── Entry point ───────────────────────────────────────────────────────────────
 
+async function pickAndShow() {
+  const { createInterface } = await import('node:readline');
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  const ask = q => new Promise(res => rl.question(q, res));
+
+  console.log('\n' + '='.repeat(W));
+  console.log('  SINGAPORE POOLS — WC 2026 Group Stage MD3');
+  console.log('  Fair odds (1÷prob), no SP margin. Compare to SP lines to find value.');
+  console.log('='.repeat(W));
+
+  // Group fixtures by group letter for a tidier menu
+  const groups = {};
+  FIXTURES.forEach((f, i) => {
+    if (!groups[f.group]) groups[f.group] = [];
+    groups[f.group].push({ f, i });
+  });
+
+  console.log('');
+  Object.entries(groups).forEach(([g, items]) => {
+    items.forEach(({ f, i }) => {
+      const home = HOSTS.has(f.t1) ? ' ⌂' : HOSTS.has(f.t2) ? ' ⌂' : '';
+      console.log(`  ${String(i + 1).padStart(2)}.  Group ${g}  ${f.team1} vs ${f.team2}${home}`);
+    });
+  });
+  console.log(`\n   0.  Show all matches`);
+  console.log('');
+
+  let choice;
+  while (true) {
+    const raw = await ask('  Select a match (0–' + FIXTURES.length + '): ');
+    const n = parseInt(raw.trim(), 10);
+    if (!isNaN(n) && n >= 0 && n <= FIXTURES.length) { choice = n; break; }
+    console.log('  Please enter a number between 0 and ' + FIXTURES.length);
+  }
+  rl.close();
+
+  console.log('');
+  if (choice === 0) {
+    FIXTURES.forEach(printMatch);
+  } else {
+    printMatch(FIXTURES[choice - 1]);
+  }
+}
+
 const args = process.argv.slice(2);
 
 if (args.length === 0) {
-  const banner = '='.repeat(W);
-  console.log('\n' + banner);
-  console.log('  SINGAPORE POOLS — WC 2026 GROUP STAGE MD3 PREDICTIONS');
-  console.log(`  Generated: ${new Date().toUTCString()}`);
-  console.log('  Model: Elo + Dixon-Coles bivariate Poisson  |  cup26matches.com');
-  console.log('  "Odds" column = fair decimal odds (1 ÷ probability), no SP margin.');
-  console.log('  Compare to SP\'s published lines to spot value bets.');
-  console.log(banner);
-  FIXTURES.forEach(printMatch);
+  pickAndShow();
 } else if (args.length >= 2) {
   const [t1slug, t2slug, homeSlug] = args;
   if (!ratings[t1slug] || !ratings[t2slug]) {
