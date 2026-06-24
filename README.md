@@ -32,10 +32,10 @@ node backtest.mjs
 
 | Metric (763 evaluated, 150 burn-in) | Model | Baseline |
 |---|---|---|
-| **Ranked Probability Score** (the football standard, ↓) | **0.175** | coin-flip 0.241 |
-| Log-loss (↓) | **0.89** | coin-flip 1.10 |
-| Brier score (↓) | **0.52** | coin-flip 0.67 |
-| **Expected Calibration Error** (↓) | **2.3%** | < 5% = well-calibrated |
+| **Ranked Probability Score** (the football standard, ↓) | **0.170** | coin-flip 0.241 |
+| Log-loss (↓) | **0.87** | coin-flip 1.10 |
+| Brier score (↓) | **0.51** | coin-flip 0.67 |
+| **Expected Calibration Error** (↓) | **1.2%** | < 5% = well-calibrated |
 | Correct result (win/draw/loss) | **62%** | always-home 49% · coin-flip 33% |
 | When a clear favourite (p ≥ 50%) | **69%** | — |
 
@@ -46,20 +46,18 @@ probability the model issued across the out-of-sample matches:
 
 | Model said | Actually happened | n |
 |---|---|---|
-| 5% | 7% | 225 |
-| 15% | 13% | 374 |
-| 26% | 24% | 804 |
-| 35% | 32% | 205 |
-| 45% | 54% | 200 |
-| 55% | 56% | 149 |
-| 65% | 67% | 136 |
-| 75% | 76% | 95 |
-| 85% | 85% | 100 |
+| 6% | 6% | 254 |
+| 15% | 15% | 433 |
+| 25% | 24% | 720 |
+| 35% | 35% | 194 |
+| 45% | 49% | 156 |
+| 55% | 53% | 154 |
+| 65% | 69% | 154 |
+| 74% | 71% | 115 |
+| 85% | 88% | 96 |
+| 91% | 92% | 13 |
 
-> _**Changelog** — Jun 11, 2026: Monte Carlo raised to **50,000 trials** (5× lower tail noise);
-> in-tournament conditioning is live; backtest extended with RPS + a reliability curve + ECE;
-> data refreshed through Jun 2026. · Jun 7: goal-model variance denominator 350→400; per-team
-> strength priors applied on the live site on top of this core model._
+> _**Changelog** — Jun 24, 2026: Home advantage formula corrected (single-sided; HOME\_ADV refitted to 150) and 9 missing WC participants added to rating priors — RPS improved to 0.170, ECE to 1.2%. · Jun 11: Monte Carlo raised to **50,000 trials**; in-tournament conditioning live; backtest extended with RPS + reliability curve + ECE; data refreshed through Jun 2026. · Jun 7: goal-model variance denominator 350→400; per-team strength priors applied on the live site._
 
 No model is a crystal ball — football is high-variance and draws are genuinely hard. These are
 well-calibrated estimates, and we make **no claim to beat the betting market**.
@@ -69,58 +67,58 @@ well-calibrated estimates, and we make **no claim to beat the betting market**.
 The model's call on **every finished match** of the tournament, updated as it happens:
 
 <!-- TRACK-RECORD:START -->
-**32/48 correct picks (67%) · avg RPS 0.145** (coin-flip ≈ 0.245) · updated 2026-06-24
+**31/48 correct picks (65%) · avg RPS 0.142** (coin-flip ≈ 0.245) · updated 2026-06-24
 
 | Date | Result | Model's pick | |
 |---|---|---|---|
-| 2026-06-23 | Portugal 5–0 Uzbekistan | Portugal 73% | ✅ |
-| 2026-06-23 | Colombia 1–0 DR Congo | Colombia 63% | ✅ |
-| 2026-06-23 | England 0–0 Ghana | England 75% | ❌ |
-| 2026-06-23 | Panama 0–1 Croatia | Croatia 64% | ✅ |
-| 2026-06-22 | France 3–0 Iraq | France 83% | ✅ |
-| 2026-06-22 | Norway 3–2 Senegal | Norway 39% | ✅ |
-| 2026-06-22 | Argentina 2–0 Austria | Argentina 66% | ✅ |
-| 2026-06-22 | Jordan 1–2 Algeria | Algeria 54% | ✅ |
-| 2026-06-21 | Belgium 0–0 Iran | Belgium 51% | ❌ |
-| 2026-06-21 | New Zealand 1–3 Egypt | Egypt 48% | ✅ |
-| 2026-06-21 | Spain 4–0 Saudi Arabia | Spain 77% | ✅ |
+| 2026-06-23 | Portugal 5–0 Uzbekistan | Portugal 68% | ✅ |
+| 2026-06-23 | Colombia 1–0 DR Congo | Colombia 58% | ✅ |
+| 2026-06-23 | England 0–0 Ghana | England 77% | ❌ |
+| 2026-06-23 | Panama 0–1 Croatia | Croatia 70% | ✅ |
+| 2026-06-22 | France 3–0 Iraq | France 84% | ✅ |
+| 2026-06-22 | Norway 3–2 Senegal | Norway 42% | ✅ |
+| 2026-06-22 | Argentina 2–0 Austria | Argentina 73% | ✅ |
+| 2026-06-22 | Jordan 1–2 Algeria | Algeria 58% | ✅ |
+| 2026-06-21 | Belgium 0–0 Iran | Belgium 54% | ❌ |
+| 2026-06-21 | New Zealand 1–3 Egypt | Egypt 50% | ✅ |
+| 2026-06-21 | Spain 4–0 Saudi Arabia | Spain 84% | ✅ |
 | 2026-06-21 | Uruguay 2–2 Cape Verde | Uruguay 63% | ❌ |
-| 2026-06-20 | Germany 2–1 Ivory Coast | Germany 59% | ✅ |
-| 2026-06-20 | Ecuador 0–0 Curaçao | Ecuador 69% | ❌ |
-| 2026-06-20 | Netherlands 5–1 Sweden | Netherlands 53% | ✅ |
-| 2026-06-20 | Tunisia 0–4 Japan | Japan 53% | ✅ |
-| 2026-06-19 | Scotland 0–1 Morocco | Morocco 61% | ✅ |
-| 2026-06-19 | Brazil 3–0 Haiti | Brazil 83% | ✅ |
-| 2026-06-19 | USA 2–0 Australia | USA 49% | ✅ |
-| 2026-06-19 | Turkey 0–1 Paraguay | Turkey 41% | ❌ |
-| 2026-06-18 | Czech Republic 1–1 South Africa | Czech Republic 43% | ❌ |
-| 2026-06-18 | Mexico 1–0 South Korea | Mexico 51% | ✅ |
-| 2026-06-18 | Switzerland 4–1 Bosnia & Herzegovina | Switzerland 61% | ✅ |
-| 2026-06-18 | Canada 6–0 Qatar | Canada 60% | ✅ |
-| 2026-06-17 | Portugal 1–1 DR Congo | Portugal 71% | ❌ |
-| 2026-06-17 | Uzbekistan 1–3 Colombia | Colombia 65% | ✅ |
-| 2026-06-17 | England 4–2 Croatia | England 52% | ✅ |
-| 2026-06-17 | Ghana 1–0 Panama | Ghana 41% | ✅ |
-| 2026-06-16 | France 3–1 Senegal | France 55% | ✅ |
-| 2026-06-16 | Iraq 1–4 Norway | Norway 69% | ✅ |
-| 2026-06-16 | Argentina 3–0 Algeria | Argentina 68% | ✅ |
-| 2026-06-16 | Austria 3–1 Jordan | Austria 56% | ✅ |
-| 2026-06-15 | Belgium 1–1 Egypt | Belgium 58% | ❌ |
-| 2026-06-15 | Iran 2–2 New Zealand | Iran 54% | ❌ |
-| 2026-06-15 | Spain 0–0 Cape Verde | Spain 83% | ❌ |
-| 2026-06-15 | Saudi Arabia 1–1 Uruguay | Uruguay 56% | ❌ |
-| 2026-06-14 | Germany 7–1 Curaçao | Germany 80% | ✅ |
-| 2026-06-14 | Ivory Coast 1–0 Ecuador | Ecuador 47% | ❌ |
-| 2026-06-14 | Netherlands 2–2 Japan | Netherlands 44% | ❌ |
-| 2026-06-14 | Sweden 5–1 Tunisia | Sweden 44% | ✅ |
-| 2026-06-13 | Qatar 1–1 Switzerland | Switzerland 62% | ❌ |
-| 2026-06-13 | Brazil 1–1 Morocco | Brazil 45% | ❌ |
-| 2026-06-13 | Haiti 0–1 Scotland | Scotland 51% | ✅ |
-| 2026-06-13 | Australia 2–0 Turkey | Australia 40% | ✅ |
-| 2026-06-12 | Canada 1–1 Bosnia & Herzegovina | Canada 59% | ❌ |
+| 2026-06-20 | Germany 2–1 Ivory Coast | Germany 62% | ✅ |
+| 2026-06-20 | Ecuador 0–0 Curaçao | Ecuador 62% | ❌ |
+| 2026-06-20 | Netherlands 5–1 Sweden | Netherlands 64% | ✅ |
+| 2026-06-20 | Tunisia 0–4 Japan | Japan 59% | ✅ |
+| 2026-06-19 | Scotland 0–1 Morocco | Morocco 64% | ✅ |
+| 2026-06-19 | Brazil 3–0 Haiti | Brazil 86% | ✅ |
+| 2026-06-19 | USA 2–0 Australia | USA 47% | ✅ |
+| 2026-06-19 | Turkey 0–1 Paraguay | Turkey 51% | ❌ |
+| 2026-06-18 | Czech Republic 1–1 South Africa | Czech Republic 44% | ❌ |
+| 2026-06-18 | Mexico 1–0 South Korea | Mexico 55% | ✅ |
+| 2026-06-18 | Switzerland 4–1 Bosnia & Herzegovina | Switzerland 66% | ✅ |
+| 2026-06-18 | Canada 6–0 Qatar | Canada 63% | ✅ |
+| 2026-06-17 | Portugal 1–1 DR Congo | Portugal 64% | ❌ |
+| 2026-06-17 | Uzbekistan 1–3 Colombia | Colombia 61% | ✅ |
+| 2026-06-17 | England 4–2 Croatia | England 50% | ✅ |
+| 2026-06-17 | Ghana 1–0 Panama | Ghana 42% | ✅ |
+| 2026-06-16 | France 3–1 Senegal | France 60% | ✅ |
+| 2026-06-16 | Iraq 1–4 Norway | Norway 70% | ✅ |
+| 2026-06-16 | Argentina 3–0 Algeria | Argentina 79% | ✅ |
+| 2026-06-16 | Austria 3–1 Jordan | Austria 65% | ✅ |
+| 2026-06-15 | Belgium 1–1 Egypt | Belgium 61% | ❌ |
+| 2026-06-15 | Iran 2–2 New Zealand | Iran 58% | ❌ |
+| 2026-06-15 | Spain 0–0 Cape Verde | Spain 85% | ❌ |
+| 2026-06-15 | Saudi Arabia 1–1 Uruguay | Uruguay 60% | ❌ |
+| 2026-06-14 | Germany 7–1 Curaçao | Germany 78% | ✅ |
+| 2026-06-14 | Ivory Coast 1–0 Ecuador | Ecuador 45% | ❌ |
+| 2026-06-14 | Netherlands 2–2 Japan | Netherlands 46% | ❌ |
+| 2026-06-14 | Sweden 5–1 Tunisia | Sweden 40% | ✅ |
+| 2026-06-13 | Qatar 1–1 Switzerland | Switzerland 68% | ❌ |
+| 2026-06-13 | Brazil 1–1 Morocco | Brazil 50% | ❌ |
+| 2026-06-13 | Haiti 0–1 Scotland | Scotland 53% | ✅ |
+| 2026-06-13 | Australia 2–0 Turkey | Turkey 38% | ❌ |
+| 2026-06-12 | Canada 1–1 Bosnia & Herzegovina | Canada 62% | ❌ |
 | 2026-06-12 | USA 4–1 Paraguay | USA 60% | ✅ |
-| 2026-06-11 | Mexico 2–0 South Africa | Mexico 71% | ✅ |
-| 2026-06-11 | South Korea 2–1 Czech Republic | South Korea 49% | ✅ |
+| 2026-06-11 | Mexico 2–0 South Africa | Mexico 76% | ✅ |
+| 2026-06-11 | South Korea 2–1 Czech Republic | South Korea 51% | ✅ |
 
 _Every call is listed — hits and misses. Probabilities are the model's frozen pre-match numbers (ratings don't re-fit mid-tournament), so nothing here is retro-fitted. Reproduce with `node track-record.mjs`._
 <!-- TRACK-RECORD:END -->

@@ -39,9 +39,11 @@ export function poissonSample(lambda, rng = Math.random) {
 }
 
 // 1X2 probabilities via Dixon-Coles bivariate Poisson over 0–8 goals each side.
+// homeBonusA > 0 = team A at home; < 0 = team B at home.
+// Convention: only the home team's attack rate gets the bonus (single-sided).
 export function matchProb(ratingA, ratingB, homeBonusA = 0) {
-  const lambda = expectedGoals(ratingA, ratingB, homeBonusA);
-  const mu = expectedGoals(ratingB, ratingA, -homeBonusA / 2);
+  const lambda = expectedGoals(ratingA, ratingB, homeBonusA > 0 ? homeBonusA : 0);
+  const mu     = expectedGoals(ratingB, ratingA, homeBonusA < 0 ? -homeBonusA : 0);
   let winA = 0, draw = 0, winB = 0;
   for (let a = 0; a <= 8; a++) {
     const pA = poissonPmf(a, lambda);
@@ -57,8 +59,8 @@ export function matchProb(ratingA, ratingB, homeBonusA = 0) {
 
 // Sample a scoreline (for Monte Carlo). allowDraw=false → penalty shootout nudge toward higher Elo.
 export function sampleMatch(ratingA, ratingB, homeBonusA = 0, allowDraw = true, rng = Math.random) {
-  const eA = expectedGoals(ratingA, ratingB, homeBonusA);
-  const eB = expectedGoals(ratingB, ratingA, -homeBonusA / 2);
+  const eA = expectedGoals(ratingA, ratingB, homeBonusA > 0 ? homeBonusA : 0);
+  const eB = expectedGoals(ratingB, ratingA, homeBonusA < 0 ? -homeBonusA : 0);
   let goalsA = poissonSample(eA, rng);
   let goalsB = poissonSample(eB, rng);
   if (!allowDraw && goalsA === goalsB) {

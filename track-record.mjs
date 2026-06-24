@@ -14,7 +14,7 @@ const { ratings } = JSON.parse(readFileSync(D("elo-calibrated.json"), "utf8"));
 const { updated, matches } = JSON.parse(readFileSync(D("wc2026-results.json"), "utf8"));
 
 const HOST = new Set(["mexico", "usa", "canada"]);
-const HOME_ADV = 75;
+const HOME_ADV = 150;
 const rps3 = (p, y) => 0.5 * ((p[0] - y[0]) ** 2 + (p[0] + p[1] - y[0] - y[1]) ** 2);
 
 let lines = [];

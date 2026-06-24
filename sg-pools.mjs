@@ -64,14 +64,14 @@ function printMatch(fix) {
   const rA = ratings[fix.t1], rB = ratings[fix.t2];
   if (!rA || !rB) { console.error(`  [SKIP] Missing rating for ${fix.t1} or ${fix.t2}`); return; }
 
-  // Home advantage: host team gets +75 Elo (matches matchProb convention).
-  const hb = HOSTS.has(fix.t1) ? 75 : HOSTS.has(fix.t2) ? -75 : 0;
-  const lA = expectedGoals(rA, rB, hb);
-  const lB = expectedGoals(rB, rA, -hb / 2);
+  // Home advantage: host team gets +150 Elo (single-sided — only home team's attack boosted).
+  const hb = HOSTS.has(fix.t1) ? 150 : HOSTS.has(fix.t2) ? -150 : 0;
+  const lA = expectedGoals(rA, rB, hb > 0 ? hb : 0);
+  const lB = expectedGoals(rB, rA, hb < 0 ? -hb : 0);
   const matrix = buildScoreMatrix(lA, lB);
 
-  const homeTag = hb > 0 ? `  [${fix.team1} at home +75]`
-                : hb < 0 ? `  [${fix.team2} at home +75]`
+  const homeTag = hb > 0 ? `  [${fix.team1} at home +150]`
+                : hb < 0 ? `  [${fix.team2} at home +150]`
                 : '  [neutral]';
   const n1 = fix.team1, n2 = fix.team2;
 
