@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-06-24T11:59:03.749Z",
-  "method": "Walk-forward out-of-sample: each match predicted from ratings built only on prior matches; Elo updated after. Burn-in skipped.",
+  "generatedAt": "2026-06-25T10:41:30.589Z",
+  "method": "Walk-forward out-of-sample ensemble: Elo (18-mo half-life) + form (90-day half-life), equal weights. Burn-in 150 skipped.",
   "totalMatches": 961,
   "evaluated": 811,
   "burnIn": 150,
@@ -10,13 +10,13 @@
     "away": 0.2799
   },
   "model": {
-    "accuracy": 0.619,
-    "brier": 0.5102,
-    "logloss": 0.8689,
-    "rps": 0.1687,
-    "ece": 0.0114,
-    "favouriteAccuracy": 0.6878,
-    "favouriteCount": 567
+    "accuracy": 0.6178,
+    "brier": 0.5104,
+    "logloss": 0.8691,
+    "rps": 0.1688,
+    "ece": 0.0152,
+    "favouriteAccuracy": 0.6867,
+    "favouriteCount": 565
   },
   "baselines": {
     "alwaysHome": 0.4932,
@@ -32,44 +32,44 @@
           0,
           0.1
         ],
-        "n": 267,
-        "avgPred": 0.0573,
-        "obsFreq": 0.0562
+        "n": 264,
+        "avgPred": 0.0566,
+        "obsFreq": 0.0606
       },
       {
         "range": [
           0.1,
           0.2
         ],
-        "n": 461,
-        "avgPred": 0.1544,
-        "obsFreq": 0.1475
+        "n": 466,
+        "avgPred": 0.1541,
+        "obsFreq": 0.1502
       },
       {
         "range": [
           0.2,
           0.3
         ],
-        "n": 767,
-        "avgPred": 0.2466,
-        "obsFreq": 0.2412
+        "n": 766,
+        "avgPred": 0.247,
+        "obsFreq": 0.2363
       },
       {
         "range": [
           0.3,
           0.4
         ],
-        "n": 206,
-        "avgPred": 0.3541,
-        "obsFreq": 0.3447
+        "n": 205,
+        "avgPred": 0.3544,
+        "obsFreq": 0.3561
       },
       {
         "range": [
           0.4,
           0.5
         ],
-        "n": 165,
-        "avgPred": 0.4538,
+        "n": 167,
+        "avgPred": 0.4537,
         "obsFreq": 0.497
       },
       {
@@ -77,9 +77,9 @@
           0.5,
           0.6
         ],
-        "n": 167,
-        "avgPred": 0.5527,
-        "obsFreq": 0.5389
+        "n": 165,
+        "avgPred": 0.5529,
+        "obsFreq": 0.5212
       },
       {
         "range": [
@@ -87,26 +87,26 @@
           0.7
         ],
         "n": 165,
-        "avgPred": 0.6503,
-        "obsFreq": 0.6848
+        "avgPred": 0.6504,
+        "obsFreq": 0.697
       },
       {
         "range": [
           0.7,
           0.8
         ],
-        "n": 121,
-        "avgPred": 0.7439,
-        "obsFreq": 0.7273
+        "n": 120,
+        "avgPred": 0.7441,
+        "obsFreq": 0.7167
       },
       {
         "range": [
           0.8,
           0.9
         ],
-        "n": 101,
-        "avgPred": 0.8535,
-        "obsFreq": 0.8614
+        "n": 102,
+        "avgPred": 0.8529,
+        "obsFreq": 0.8725
       },
       {
         "range": [
@@ -114,10 +114,24 @@
           1
         ],
         "n": 13,
-        "avgPred": 0.9059,
+        "avgPred": 0.906,
         "obsFreq": 0.9231
       }
     ],
-    "ece": 0.0114
+    "ece": 0.0152
+  },
+  "components": {
+    "elo": {
+      "accuracy": 0.619,
+      "brier": 0.5102,
+      "logloss": 0.8689,
+      "rps": 0.1687
+    },
+    "form": {
+      "accuracy": 0.6202,
+      "brier": 0.5106,
+      "logloss": 0.8695,
+      "rps": 0.1689
+    }
   }
 }

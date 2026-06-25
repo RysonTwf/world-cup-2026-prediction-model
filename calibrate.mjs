@@ -56,3 +56,30 @@ for (const slug of Object.keys(SEED)) ratings[slug] = Math.round(0.7 * (R[slug] 
 
 writeFileSync(D("elo-calibrated.json"), JSON.stringify({ matchesApplied: applied, ratings }, null, 2) + "\n");
 console.log(`Calibrated ${Object.keys(ratings).length} teams from ${applied} weighted matches → data/elo-calibrated.json`);
+
+// ─── Form ratings (90-day half-life, pure walk-forward, no SEED blend) ────────
+// Captures recent form: matches >6 months old contribute <6% weight; last 2 months dominate.
+const FORM_HALFLIFE_DAYS = 90;
+const recencyForm = (tsSec) => Math.pow(0.5, ((nowSec - tsSec) / (30.44 * 86400)) / FORM_HALFLIFE_DAYS);
+
+const RF = {};
+const getRF = (slug, name) => { const k = slug ?? `ghost:${name}`; if (RF[k] == null) RF[k] = slug && SEED[slug] != null ? SEED[slug] : 1500; return RF[k]; };
+const setRF = (slug, name, v) => { RF[slug ?? `ghost:${name}`] = v; };
+
+for (const m of matches) {
+  if (m.hg == null || m.ag == null) continue;
+  const ra = getRF(m.homeSlug, m.homeName), rb = getRF(m.awaySlug, m.awayName);
+  const homeBonus = HOST.has(m.homeSlug) ? HOME_ADV / 2 : 0;
+  const exp = expectedScore(ra, rb, homeBonus);
+  const score = m.hg > m.ag ? 1 : m.hg < m.ag ? 0 : 0.5;
+  const k = baseK(m.leagueName) * recencyForm(m.ts) * gMult(m.hg - m.ag);
+  const delta = k * (score - exp);
+  setRF(m.homeSlug, m.homeName, ra + delta);
+  setRF(m.awaySlug, m.awayName, rb - delta);
+}
+
+// No SEED blend — pure walk-forward form signal.
+const formRatings = {};
+for (const slug of Object.keys(SEED)) formRatings[slug] = Math.round(RF[slug] ?? SEED[slug]);
+writeFileSync(D("elo-form.json"), JSON.stringify({ halfLifeDays: FORM_HALFLIFE_DAYS, ratings: formRatings }, null, 2) + "\n");
+console.log(`Form ratings (${FORM_HALFLIFE_DAYS}d half-life) → data/elo-form.json`);

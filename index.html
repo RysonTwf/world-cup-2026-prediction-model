@@ -213,15 +213,16 @@ tbody tr:hover td { background: var(--bg3); }
 <section id="about">
   <div class="section-header">
     <h2>About the Model</h2>
-    <p>Elo + Dixon-Coles bivariate Poisson · Walk-forward out-of-sample validation · 811 matches evaluated</p>
+    <p>Ensemble: Elo (18-mo half-life) + Form (90-day half-life) · Simple average · Walk-forward out-of-sample · 811 matches evaluated</p>
   </div>
 
   <p class="intro">
-    A transparent, reproducible statistical model for international football.
-    Team strength is measured via Elo ratings calibrated on 961 internationals (Oct 2023–Jun 2026).
-    Match probabilities use a Dixon-Coles bivariate Poisson correction that fixes vanilla Poisson's
-    tendency to undercount 0-0 and 1-1 draws. All predictions are deterministic from frozen ratings — no
-    neural networks, no proprietary data.
+    An ensemble of two models, each using the same Dixon-Coles bivariate Poisson framework but different
+    rating signals. The <strong style="color:var(--blue)">Elo model</strong> uses an 18-month recency
+    half-life and a 70/30 blend with long-run priors — stable and well-calibrated.
+    The <strong style="color:var(--green)">form model</strong> uses a 90-day half-life with no prior blend —
+    more reactive to recent results. Final predictions are a simple 50/50 average of both.
+    Ratings are frozen at tournament start. No neural networks, no proprietary data.
   </p>
 
   <div class="cards" id="metric-cards">
@@ -471,27 +472,43 @@ function titleCase(s) { return s.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUp
 Chart.defaults.color = '#7d8590';
 Chart.defaults.borderColor = '#30363d';
 
+// ─── Ensemble (mirrors elo.mjs:ensembleProb) ─────────────────────────────────
+function ensembleProb(rEloA, rEloB, rFormA, rFormB, homeBonusA = 0) {
+  const pElo  = matchProb(rEloA,  rEloB,  homeBonusA);
+  const pForm = matchProb(rFormA, rFormB, homeBonusA);
+  return {
+    winA: (pElo.winA + pForm.winA) / 2,
+    draw: (pElo.draw  + pForm.draw)  / 2,
+    winB: (pElo.winB + pForm.winB) / 2,
+    lam:  (pElo.lam  + pForm.lam)  / 2,
+    mu:   (pElo.mu   + pForm.mu)   / 2,
+    matrix: pElo.matrix.map((s, idx) => ({ ...s, p: (s.p + (pForm.matrix[idx]?.p ?? s.p)) / 2 })),
+  };
+}
+
 // ─── Data loading ────────────────────────────────────────────────────────────
-let RATINGS = {};
+let RATINGS = {}, FORM_RATINGS = {};
 
 async function loadJSON(p) { return (await fetch(p)).json(); }
 
 async function init() {
-  const [bt, elo, wc] = await Promise.all([
+  const [bt, elo, form, wc] = await Promise.all([
     loadJSON('/data/model-backtest.json'),
     loadJSON('/data/elo-calibrated.json'),
+    loadJSON('/data/elo-form.json'),
     loadJSON('/data/wc2026-results.json'),
   ]);
-  RATINGS = elo.ratings;
+  RATINGS      = elo.ratings;
+  FORM_RATINGS = form.ratings;
 
   const updated = new Date(wc.updated);
   document.getElementById('nav-updated').textContent =
     'Updated ' + updated.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
 
   renderAbout(bt);
-  renderRatings(RATINGS);
+  renderRatings(RATINGS, FORM_RATINGS);
   renderGroups(wc.matches);
-  renderResults(wc.matches, RATINGS);
+  renderResults(wc.matches, RATINGS, FORM_RATINGS);
   populatePredictor(RATINGS);
 }
 
@@ -585,18 +602,22 @@ function renderAbout(bt) {
     }
   });
 
-  // Baseline comparison
+  // Baseline + component comparison chart
   const labels = ['RPS', 'Brier', 'Log-loss'];
-  const modelVals   = [m.rps,          m.brier,          m.logloss];
-  const baselineVals= [b.uniformRps,   b.uniformBrier,   b.uniformLogloss];
+  const modelVals    = [m.rps,            m.brier,            m.logloss];
+  const baselineVals = [b.uniformRps,     b.uniformBrier,     b.uniformLogloss];
+  const eloVals      = bt.components ? [bt.components.elo.rps,  bt.components.elo.brier,  bt.components.elo.logloss]  : modelVals;
+  const formVals     = bt.components ? [bt.components.form.rps, bt.components.form.brier, bt.components.form.logloss] : modelVals;
 
   new Chart(document.getElementById('baselineChart'), {
     type: 'bar',
     data: {
       labels,
       datasets: [
-        { label: 'This Model',        data: modelVals,    backgroundColor: 'rgba(63,185,80,0.7)',   borderColor: '#3fb950', borderWidth: 1, borderRadius: 3 },
-        { label: 'Uniform Baseline',  data: baselineVals, backgroundColor: 'rgba(125,133,144,0.3)', borderColor: '#7d8590', borderWidth: 1, borderRadius: 3 },
+        { label: 'Ensemble',         data: modelVals,    backgroundColor: 'rgba(188,140,255,0.7)', borderColor: '#bc8cff', borderWidth: 1, borderRadius: 3 },
+        { label: 'Elo only',         data: eloVals,      backgroundColor: 'rgba(88,166,255,0.5)',  borderColor: '#58a6ff', borderWidth: 1, borderRadius: 3 },
+        { label: 'Form only',        data: formVals,     backgroundColor: 'rgba(63,185,80,0.5)',   borderColor: '#3fb950', borderWidth: 1, borderRadius: 3 },
+        { label: 'Uniform baseline', data: baselineVals, backgroundColor: 'rgba(125,133,144,0.25)',borderColor: '#7d8590', borderWidth: 1, borderRadius: 3 },
       ]
     },
     options: {
@@ -611,10 +632,11 @@ function renderAbout(bt) {
 }
 
 // ─── Ratings ─────────────────────────────────────────────────────────────────
-function renderRatings(ratings) {
+function renderRatings(ratings, formRatings) {
   const sorted = Object.entries(ratings).sort((a, b) => b[1] - a[1]);
   const labels = sorted.map(([k]) => titleCase(k));
   const values = sorted.map(([, v]) => v);
+  const formValues = sorted.map(([k]) => formRatings[k] ?? null);
   const colors = values.map(v =>
     v >= 1950 ? 'rgba(63,185,80,0.75)'  :
     v >= 1800 ? 'rgba(88,166,255,0.75)' :
@@ -625,24 +647,38 @@ function renderRatings(ratings) {
     type: 'bar',
     data: {
       labels,
-      datasets: [{
-        label: 'Elo Rating',
-        data: values,
-        backgroundColor: colors,
-        borderColor: colors.map(c => c.replace(/[\d.]+\)$/, '1)')),
-        borderWidth: 1,
-        borderRadius: 2,
-      }]
+      datasets: [
+        {
+          label: 'Elo Rating',
+          data: values,
+          backgroundColor: colors,
+          borderColor: colors.map(c => c.replace(/[\d.]+\)$/, '1)')),
+          borderWidth: 1,
+          borderRadius: 2,
+        },
+        {
+          label: 'Form Rating (90d)',
+          data: formValues,
+          type: 'scatter',
+          backgroundColor: 'rgba(255,255,255,0.7)',
+          borderColor: '#ffffff',
+          pointRadius: 3,
+          pointStyle: 'rectRot',
+        },
+      ]
     },
     options: {
       indexAxis: 'y',
       responsive: true, maintainAspectRatio: false,
       plugins: {
-        legend: { display: false },
+        legend: { labels: { font: { size: 11 }, boxWidth: 10 } },
         tooltip: {
           callbacks: {
-            label: ctx => `Elo: ${ctx.raw}`,
+            label: ctx => ctx.datasetIndex === 0
+              ? `Elo: ${ctx.raw}`
+              : `Form: ${ctx.raw}  (Δ ${(ctx.raw - values[ctx.dataIndex] >= 0 ? '+' : '') + (ctx.raw - values[ctx.dataIndex])})`,
             afterLabel: ctx => {
+              if (ctx.datasetIndex !== 0) return null;
               const v = ctx.raw;
               return v >= 1950 ? 'Elite' : v >= 1800 ? 'Strong' : v >= 1650 ? 'Mid-tier' : 'Lower-tier';
             }
@@ -652,7 +688,7 @@ function renderRatings(ratings) {
       scales: {
         x: {
           min: 1250,
-          title: { display: true, text: 'Elo Rating' },
+          title: { display: true, text: 'Rating' },
           ticks: { font: { size: 11 } },
           grid: { color: '#30363d80' },
         },
@@ -739,16 +775,16 @@ function renderGroups(matches) {
 }
 
 // ─── Results ──────────────────────────────────────────────────────────────────
-function renderResults(matches, ratings) {
+function renderResults(matches, ratings, formRatings) {
   let correct = 0, total = 0;
   const rows = [];
 
   for (const m of [...matches].sort((a, b) => a.date.localeCompare(b.date))) {
     if (m.status !== 'FT') continue;
-    const rA = ratings[m.t1] || 1500;
-    const rB = ratings[m.t2] || 1500;
+    const rA = ratings[m.t1] || 1500, rB = ratings[m.t2] || 1500;
+    const fA = formRatings[m.t1] || rA, fB = formRatings[m.t2] || rB;
     const bonus = getHomeBonus(m.t1, m.t2);
-    const p = matchProb(rA, rB, bonus);
+    const p = ensembleProb(rA, rB, fA, fB, bonus);
 
     let pick, conf, pickLabel;
     if (p.winA >= p.draw && p.winA >= p.winB) { pick = 'team1'; conf = p.winA; pickLabel = m.team1; }
@@ -799,13 +835,13 @@ function runPredictor() {
   const homeOpt = document.getElementById('pred-home').value;
   if (slugA === slugB) { alert('Pick two different teams.'); return; }
 
-  const rA = RATINGS[slugA] || 1500;
-  const rB = RATINGS[slugB] || 1500;
+  const rA = RATINGS[slugA] || 1500, rB = RATINGS[slugB] || 1500;
+  const fA = FORM_RATINGS[slugA] || rA, fB = FORM_RATINGS[slugB] || rB;
   let bonus = 0;
   if (homeOpt === 'a') bonus = HOME_ADV;
   if (homeOpt === 'b') bonus = -HOME_ADV;
 
-  const p = matchProb(rA, rB, bonus);
+  const p = ensembleProb(rA, rB, fA, fB, bonus);
   const nameA = titleCase(slugA), nameB = titleCase(slugB);
 
   document.getElementById('pred-name-a').textContent = nameA;

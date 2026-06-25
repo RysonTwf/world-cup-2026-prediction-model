@@ -57,6 +57,20 @@ export function matchProb(ratingA, ratingB, homeBonusA = 0) {
   return { winA: winA / total, draw: draw / total, winB: winB / total, expectedGoalsA: lambda, expectedGoalsB: mu };
 }
 
+// Ensemble: simple average of Elo model and form model (90-day half-life) probabilities.
+// Both models use the same Dixon-Coles framework; only the rating inputs differ.
+export function ensembleProb(rEloA, rEloB, rFormA, rFormB, homeBonusA = 0) {
+  const pElo  = matchProb(rEloA,  rEloB,  homeBonusA);
+  const pForm = matchProb(rFormA, rFormB, homeBonusA);
+  return {
+    winA: (pElo.winA + pForm.winA) / 2,
+    draw: (pElo.draw  + pForm.draw)  / 2,
+    winB: (pElo.winB + pForm.winB) / 2,
+    expectedGoalsA: (pElo.expectedGoalsA + pForm.expectedGoalsA) / 2,
+    expectedGoalsB: (pElo.expectedGoalsB + pForm.expectedGoalsB) / 2,
+  };
+}
+
 // Sample a scoreline (for Monte Carlo). allowDraw=false → penalty shootout nudge toward higher Elo.
 export function sampleMatch(ratingA, ratingB, homeBonusA = 0, allowDraw = true, rng = Math.random) {
   const eA = expectedGoals(ratingA, ratingB, homeBonusA > 0 ? homeBonusA : 0);
