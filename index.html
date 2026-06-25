@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WC 2026 Prediction Model</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg:     #0d1117;
+  --bg2:    #161b22;
+  --bg3:    #21262d;
+  --border: #30363d;
+  --text:   #e6edf3;
+  --muted:  #7d8590;
+  --green:  #3fb950;
+  --blue:   #58a6ff;
+  --red:    #f85149;
+  --yellow: #d29922;
+  --purple: #bc8cff;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+}
+
+/* ── Nav ── */
+nav {
+  position: sticky; top: 0; z-index: 100;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  padding: 0 2rem;
+  display: flex; align-items: center; gap: 2rem; height: 60px;
+}
+.nav-brand { font-size: 1.05rem; font-weight: 700; color: var(--text); text-decoration: none; }
+.nav-links { display: flex; gap: 1.5rem; list-style: none; }
+.nav-links a { color: var(--muted); text-decoration: none; font-size: 0.875rem; transition: color .15s; }
+.nav-links a:hover { color: var(--text); }
+.nav-updated { margin-left: auto; font-size: 0.75rem; color: var(--muted); }
+
+/* ── Layout ── */
+main { max-width: 1200px; margin: 0 auto; padding: 2.5rem 2rem; }
+section { margin-bottom: 4rem; scroll-margin-top: 72px; }
+
+.section-header { margin-bottom: 1.5rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--border); }
+.section-header h2 { font-size: 1.4rem; font-weight: 600; }
+.section-header p  { color: var(--muted); font-size: 0.85rem; margin-top: 0.2rem; }
+
+/* ── Cards ── */
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+.card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.1rem 1.25rem;
+}
+.card-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.card-value { font-size: 1.9rem; font-weight: 700; color: var(--green); margin: 0.2rem 0 0.1rem; }
+.card-sub   { font-size: 0.75rem; color: var(--muted); }
+
+/* ── Charts ── */
+.chart-box {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+.chart-box h3 { font-size: 0.95rem; font-weight: 600; margin-bottom: 0.35rem; }
+.chart-box .sub { font-size: 0.78rem; color: var(--muted); margin-bottom: 1rem; }
+
+.charts-row { display: grid; grid-template-columns: 3fr 2fr; gap: 1.5rem; }
+@media (max-width: 768px) { .charts-row { grid-template-columns: 1fr; } }
+
+/* ── Methodology ── */
+.method-list { display: flex; flex-direction: column; gap: 0.9rem; }
+.method-item { display: flex; gap: 0.65rem; align-items: flex-start; }
+.method-num {
+  width: 22px; height: 22px; min-width: 22px;
+  background: #238636; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.65rem; font-weight: 700; color: #fff; margin-top: 3px;
+}
+.method-text strong { display: block; font-size: 0.85rem; color: var(--text); margin-bottom: 0.05rem; }
+.method-text span   { font-size: 0.78rem; color: var(--muted); }
+
+.divider { border: none; border-top: 1px solid var(--border); margin: 1.25rem 0; }
+
+/* ── Tables ── */
+.table-wrap { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+th {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.7rem; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .05em;
+  color: var(--muted);
+  background: var(--bg3);
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+th.r, td.r { text-align: right; }
+th.c, td.c { text-align: center; }
+td { padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border); }
+tr:last-child td { border-bottom: none; }
+tbody tr:hover td { background: var(--bg3); }
+
+/* ── Groups ── */
+.groups-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+  gap: 1.25rem;
+}
+.group-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.group-title {
+  background: var(--bg3); padding: 0.6rem 0.9rem;
+  font-weight: 600; font-size: 0.85rem;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.group-table th, .group-table td { padding: 0.4rem 0.7rem; }
+.q-row td:first-child { border-left: 3px solid var(--green); }
+.badge {
+  display: inline-block; padding: 0.1rem 0.45rem;
+  border-radius: 9999px; font-size: 0.65rem; font-weight: 600;
+}
+.badge-green  { background: rgba(63,185,80,.15);  color: var(--green);  }
+.badge-yellow { background: rgba(210,153,34,.15); color: var(--yellow); }
+
+/* ── Results ── */
+.correct { color: var(--green); font-weight: 700; }
+.wrong   { color: var(--red);   font-weight: 700; }
+.prob-bar { display: flex; height: 4px; border-radius: 2px; overflow: hidden; margin-top: 3px; }
+.pb-w1 { background: var(--blue);   }
+.pb-d  { background: var(--yellow); }
+.pb-w2 { background: var(--red);    }
+
+/* ── Predictor ── */
+.predictor-form {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 1.5rem;
+  display: grid; grid-template-columns: 1fr auto 1fr auto; gap: 1rem; align-items: end;
+}
+@media (max-width: 640px) { .predictor-form { grid-template-columns: 1fr; } }
+.form-group label { display: block; font-size: 0.75rem; color: var(--muted); margin-bottom: 0.3rem; text-transform: uppercase; letter-spacing: .04em; }
+.form-group select, .form-group input {
+  width: 100%; padding: 0.5rem 0.75rem;
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 6px; color: var(--text); font-size: 0.875rem;
+  appearance: none;
+}
+.vs-label { color: var(--muted); font-size: 1.1rem; padding-bottom: 0.4rem; text-align: center; }
+.btn {
+  padding: 0.55rem 1.25rem; background: #238636; border: none;
+  border-radius: 6px; color: #fff; font-size: 0.875rem; font-weight: 600;
+  cursor: pointer; white-space: nowrap; align-self: end;
+}
+.btn:hover { background: #2ea043; }
+
+.predictor-result {
+  display: none;
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 1.5rem; margin-top: 1rem;
+}
+.pred-teams { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.25rem; }
+.pred-team-name { font-size: 1.1rem; font-weight: 700; flex: 1; }
+.pred-team-name.right { text-align: right; }
+.pred-vs { color: var(--muted); font-size: 0.85rem; }
+.pred-probs { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem; }
+.pred-prob-box { background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; padding: 0.75rem 1rem; text-align: center; }
+.pred-prob-box .pct { font-size: 1.8rem; font-weight: 700; }
+.pred-prob-box .lbl { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; }
+.pred-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.pred-sub-box { background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; padding: 0.75rem 1rem; }
+.pred-sub-box h4 { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 0.5rem; }
+.scoreline { display: flex; justify-content: space-between; font-size: 0.82rem; padding: 0.15rem 0; }
+.scoreline .sp { color: var(--muted); }
+
+/* ── Ratings chart ── */
+.ratings-wrap { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; }
+.ratings-legend { display: flex; gap: 1.25rem; margin-bottom: 1rem; flex-wrap: wrap; }
+.legend-item { display: flex; align-items: center; gap: 0.4rem; font-size: 0.78rem; color: var(--muted); }
+.legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+/* ── Misc ── */
+.loading { text-align: center; padding: 2rem; color: var(--muted); }
+.intro { color: var(--muted); font-size: 0.9rem; max-width: 780px; margin-bottom: 1.75rem; line-height: 1.7; }
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-brand" href="#">⚽ WC 2026 Model</a>
+  <ul class="nav-links">
+    <li><a href="#about">About</a></li>
+    <li><a href="#ratings">Ratings</a></li>
+    <li><a href="#groups">Groups</a></li>
+    <li><a href="#results">Results</a></li>
+    <li><a href="#predictor">Predictor</a></li>
+  </ul>
+  <span class="nav-updated" id="nav-updated"></span>
+</nav>
+
+<main>
+
+<!-- ═══ ABOUT ═══ -->
+<section id="about">
+  <div class="section-header">
+    <h2>About the Model</h2>
+    <p>Elo + Dixon-Coles bivariate Poisson · Walk-forward out-of-sample validation · 811 matches evaluated</p>
+  </div>
+
+  <p class="intro">
+    A transparent, reproducible statistical model for international football.
+    Team strength is measured via Elo ratings calibrated on 961 internationals (Oct 2023–Jun 2026).
+    Match probabilities use a Dixon-Coles bivariate Poisson correction that fixes vanilla Poisson's
+    tendency to undercount 0-0 and 1-1 draws. All predictions are deterministic from frozen ratings — no
+    neural networks, no proprietary data.
+  </p>
+
+  <div class="cards" id="metric-cards">
+    <div class="loading">Loading metrics…</div>
+  </div>
+
+  <div class="charts-row" style="margin-bottom: 1.5rem;">
+    <div class="chart-box">
+      <h3>Reliability Curve</h3>
+      <p class="sub">
+        When the model says X%, things should happen X% of the time. Points on the diagonal = perfect calibration.
+        Circle size scales with number of outcomes in each bin.
+      </p>
+      <div style="position:relative; height:320px;">
+        <canvas id="calibrationChart"></canvas>
+      </div>
+      <p style="font-size:0.75rem; color:var(--muted); margin-top:0.75rem; text-align:center;">
+        ECE (Expected Calibration Error) = <strong id="ece-val" style="color:var(--green)">—</strong> · lower is better · well-calibrated models score &lt; 2%
+      </p>
+    </div>
+
+    <div class="chart-box" style="display:flex; flex-direction:column; gap:1.25rem;">
+      <div>
+        <h3>Methodology</h3>
+        <div class="method-list" style="margin-top:0.75rem;">
+          <div class="method-item">
+            <div class="method-num">1</div>
+            <div class="method-text">
+              <strong>Elo Ratings</strong>
+              <span>70% walk-forward fitted + 30% long-run prior. K-factor by competition. 18-month recency half-life.</span>
+            </div>
+          </div>
+          <div class="method-item">
+            <div class="method-num">2</div>
+            <div class="method-text">
+              <strong>Expected Goals</strong>
+              <span>λ = 1.35 + ΔElo / 400, clamped [0.3, 3.5]. Home bonus = +150 Elo on the home team's attack rate only.</span>
+            </div>
+          </div>
+          <div class="method-item">
+            <div class="method-num">3</div>
+            <div class="method-text">
+              <strong>Dixon-Coles Match Model</strong>
+              <span>Bivariate Poisson over 0–8 goals per side. DC ρ = −0.13 corrects under-count of low-scoring draws.</span>
+            </div>
+          </div>
+          <div class="method-item">
+            <div class="method-num">4</div>
+            <div class="method-text">
+              <strong>Frozen at Kickoff</strong>
+              <span>No mid-tournament re-fitting. Stakes adjustments are separate labeled parameters, not folded into Elo.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <div>
+        <h3>vs Uniform Baseline</h3>
+        <p class="sub">Lower is better for all three metrics.</p>
+        <div style="position:relative; height:160px;">
+          <canvas id="baselineChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ RATINGS ═══ -->
+<section id="ratings">
+  <div class="section-header">
+    <h2>Team Ratings</h2>
+    <p>Calibrated Elo ratings frozen at WC 2026 tournament start · 63 teams</p>
+  </div>
+  <div class="ratings-wrap">
+    <div class="ratings-legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#3fb950"></div> Elite (1950+)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#58a6ff"></div> Strong (1800–1949)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#d29922"></div> Mid (1650–1799)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#f85149"></div> Lower (&lt;1650)</div>
+    </div>
+    <div style="position:relative; height:1200px;">
+      <canvas id="ratingsChart"></canvas>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ GROUPS ═══ -->
+<section id="groups">
+  <div class="section-header">
+    <h2>Group Standings</h2>
+    <p id="groups-sub">Computing standings…</p>
+  </div>
+  <div class="groups-grid" id="groups-container">
+    <div class="loading">Loading…</div>
+  </div>
+</section>
+
+<!-- ═══ RESULTS ═══ -->
+<section id="results">
+  <div class="section-header">
+    <h2>Match Results &amp; Predictions</h2>
+    <p id="results-sub">Loading track record…</p>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Group · Round</th>
+          <th>Match</th>
+          <th class="c">Score</th>
+          <th>Model Pick</th>
+          <th class="r">Conf.</th>
+          <th class="c"></th>
+        </tr>
+      </thead>
+      <tbody id="results-body">
+        <tr><td colspan="7" class="loading">Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ═══ PREDICTOR ═══ -->
+<section id="predictor">
+  <div class="section-header">
+    <h2>Match Predictor</h2>
+    <p>Live probabilities from frozen WC 2026 Elo ratings</p>
+  </div>
+
+  <div class="predictor-form">
+    <div class="form-group">
+      <label>Team A</label>
+      <select id="pred-team-a"></select>
+    </div>
+    <div class="vs-label">vs</div>
+    <div class="form-group">
+      <label>Team B</label>
+      <select id="pred-team-b"></select>
+    </div>
+    <div class="form-group">
+      <label>Home Team</label>
+      <select id="pred-home">
+        <option value="none">Neutral venue</option>
+        <option value="a">Team A at home</option>
+        <option value="b">Team B at home</option>
+      </select>
+    </div>
+    <button class="btn" onclick="runPredictor()">Predict</button>
+  </div>
+
+  <div class="predictor-result" id="predictor-result">
+    <div class="pred-teams">
+      <div class="pred-team-name" id="pred-name-a">—</div>
+      <div class="pred-vs">vs</div>
+      <div class="pred-team-name right" id="pred-name-b">—</div>
+    </div>
+    <div class="pred-probs">
+      <div class="pred-prob-box">
+        <div class="pct" id="pred-w1" style="color:var(--blue)">—</div>
+        <div class="lbl" id="pred-lbl-w1">Team A Win</div>
+      </div>
+      <div class="pred-prob-box">
+        <div class="pct" style="color:var(--yellow)" id="pred-d">—</div>
+        <div class="lbl">Draw</div>
+      </div>
+      <div class="pred-prob-box">
+        <div class="pct" id="pred-w2" style="color:var(--red)">—</div>
+        <div class="lbl" id="pred-lbl-w2">Team B Win</div>
+      </div>
+    </div>
+    <div class="pred-grid">
+      <div class="pred-sub-box">
+        <h4>Expected Goals</h4>
+        <div style="display:flex; justify-content:space-between; font-size:0.95rem; margin-top:0.25rem;">
+          <span><strong id="pred-xg-a" style="color:var(--blue)">—</strong> <span style="color:var(--muted); font-size:0.8rem;" id="pred-xg-lbl-a">Team A</span></span>
+          <span><span style="color:var(--muted); font-size:0.8rem;" id="pred-xg-lbl-b">Team B</span> <strong id="pred-xg-b" style="color:var(--red)">—</strong></span>
+        </div>
+      </div>
+      <div class="pred-sub-box">
+        <h4>Over/Under 2.5</h4>
+        <div style="display:flex; justify-content:space-between; font-size:0.95rem; margin-top:0.25rem;">
+          <span><strong id="pred-over" style="color:var(--green)">—</strong> <span style="color:var(--muted); font-size:0.8rem;">Over</span></span>
+          <span><span style="color:var(--muted); font-size:0.8rem;">Under</span> <strong id="pred-under">—</strong></span>
+        </div>
+      </div>
+      <div class="pred-sub-box" style="grid-column: span 2;">
+        <h4>Most Likely Scorelines</h4>
+        <div id="pred-scores" style="display:grid; grid-template-columns: repeat(3,1fr); gap:0.15rem 0; margin-top:0.25rem;"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<script>
+// ─── Elo / Dixon-Coles (mirrors elo.mjs) ────────────────────────────────────
+const DC_RHO = -0.13;
+const HOME_ADV = 150;
+const HOSTS = new Set(['usa', 'mexico', 'canada']);
+
+function dcTau(a, b, lam, mu) {
+  if (a === 0 && b === 0) return 1 - lam * mu * DC_RHO;
+  if (a === 0 && b === 1) return 1 + lam * DC_RHO;
+  if (a === 1 && b === 0) return 1 + mu * DC_RHO;
+  if (a === 1 && b === 1) return 1 - DC_RHO;
+  return 1;
+}
+function poissonPmf(k, lam) {
+  if (lam <= 0) return k === 0 ? 1 : 0;
+  let p = Math.exp(-lam);
+  for (let i = 1; i <= k; i++) p *= lam / i;
+  return p;
+}
+function xGoals(rating, opp, bonus = 0) {
+  return Math.max(0.3, Math.min(3.5, 1.35 + (rating + bonus - opp) / 400));
+}
+function matchProb(rA, rB, homeBonusA = 0) {
+  const lam = xGoals(rA, rB, homeBonusA > 0 ? homeBonusA : 0);
+  const mu  = xGoals(rB, rA, homeBonusA < 0 ? -homeBonusA : 0);
+  let winA = 0, draw = 0, winB = 0;
+  const matrix = [];
+  for (let a = 0; a <= 8; a++) {
+    const pA = poissonPmf(a, lam);
+    for (let b = 0; b <= 8; b++) {
+      const p = pA * poissonPmf(b, mu) * dcTau(a, b, lam, mu);
+      matrix.push({ a, b, p });
+      if (a > b) winA += p; else if (a < b) winB += p; else draw += p;
+    }
+  }
+  const tot = winA + draw + winB;
+  matrix.sort((x, y) => y.p - x.p);
+  return { winA: winA/tot, draw: draw/tot, winB: winB/tot, lam, mu, matrix };
+}
+function getHomeBonus(t1, t2) {
+  if (HOSTS.has(t1)) return HOME_ADV;
+  if (HOSTS.has(t2)) return -HOME_ADV;
+  return 0;
+}
+function pct(v, dp = 1) { return (v * 100).toFixed(dp) + '%'; }
+function titleCase(s) { return s.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()); }
+
+// ─── Chart defaults ──────────────────────────────────────────────────────────
+Chart.defaults.color = '#7d8590';
+Chart.defaults.borderColor = '#30363d';
+
+// ─── Data loading ────────────────────────────────────────────────────────────
+let RATINGS = {};
+
+async function loadJSON(p) { return (await fetch(p)).json(); }
+
+async function init() {
+  const [bt, elo, wc] = await Promise.all([
+    loadJSON('/data/model-backtest.json'),
+    loadJSON('/data/elo-calibrated.json'),
+    loadJSON('/data/wc2026-results.json'),
+  ]);
+  RATINGS = elo.ratings;
+
+  const updated = new Date(wc.updated);
+  document.getElementById('nav-updated').textContent =
+    'Updated ' + updated.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+
+  renderAbout(bt);
+  renderRatings(RATINGS);
+  renderGroups(wc.matches);
+  renderResults(wc.matches, RATINGS);
+  populatePredictor(RATINGS);
+}
+
+// ─── About ───────────────────────────────────────────────────────────────────
+function renderAbout(bt) {
+  const m = bt.model, b = bt.baselines;
+
+  document.getElementById('metric-cards').innerHTML = [
+    { label: 'Accuracy',         value: pct(m.accuracy, 1),          sub: `Top pick correct (${bt.evaluated.toLocaleString()} matches)` },
+    { label: 'Favourite Acc.',   value: pct(m.favouriteAccuracy, 1), sub: `When model gives ≥ 50% (${m.favouriteCount} matches)` },
+    { label: 'RPS',              value: m.rps.toFixed(4),            sub: `Uniform baseline: ${b.uniformRps.toFixed(3)}` },
+    { label: 'Brier Score',      value: m.brier.toFixed(4),          sub: `Uniform baseline: ${b.uniformBrier.toFixed(3)}` },
+    { label: 'ECE',              value: pct(m.ece, 2),               sub: 'Expected calibration error' },
+  ].map(c => `
+    <div class="card">
+      <div class="card-label">${c.label}</div>
+      <div class="card-value">${c.value}</div>
+      <div class="card-sub">${c.sub}</div>
+    </div>`).join('');
+
+  document.getElementById('ece-val').textContent = pct(m.ece, 2);
+
+  // Calibration chart
+  const bins = bt.calibration.bins;
+  const modelPts = bins.map(b => ({ x: b.avgPred, y: b.obsFreq, n: b.n, dev: Math.abs(b.obsFreq - b.avgPred) }));
+
+  new Chart(document.getElementById('calibrationChart'), {
+    type: 'scatter',
+    data: {
+      datasets: [
+        {
+          label: 'Perfect calibration',
+          data: [{ x: 0, y: 0 }, { x: 1, y: 1 }],
+          type: 'line',
+          borderColor: 'rgba(125,133,144,0.45)',
+          borderDash: [6, 4],
+          borderWidth: 2,
+          pointRadius: 0,
+          fill: false,
+          tension: 0,
+          order: 2,
+        },
+        {
+          label: 'This model',
+          data: modelPts,
+          backgroundColor: modelPts.map(p =>
+            p.dev < 0.02 ? 'rgba(63,185,80,0.85)' :
+            p.dev < 0.04 ? 'rgba(88,166,255,0.85)' : 'rgba(210,153,34,0.85)'
+          ),
+          borderColor: '#ffffff18',
+          borderWidth: 1,
+          pointRadius: modelPts.map(p => Math.max(6, Math.sqrt(p.n / 5))),
+          pointHoverRadius: modelPts.map(p => Math.max(8, Math.sqrt(p.n / 5) + 2)),
+          order: 1,
+        },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { font: { size: 11 }, boxWidth: 12 } },
+        tooltip: {
+          callbacks: {
+            label(ctx) {
+              if (ctx.datasetIndex !== 1) return null;
+              const p = modelPts[ctx.dataIndex];
+              return [
+                `Predicted: ${pct(p.x, 1)}`,
+                `Observed:  ${pct(p.y, 1)}`,
+                `Deviation: ${(p.dev * 100).toFixed(2)}%`,
+                `n = ${p.n.toLocaleString()} outcomes`,
+              ];
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          type: 'linear', min: 0, max: 1,
+          title: { display: true, text: 'Predicted Probability' },
+          ticks: { callback: v => pct(v, 0) },
+          grid: { color: '#30363d80' },
+        },
+        y: {
+          min: 0, max: 1,
+          title: { display: true, text: 'Observed Frequency' },
+          ticks: { callback: v => pct(v, 0) },
+          grid: { color: '#30363d80' },
+        }
+      }
+    }
+  });
+
+  // Baseline comparison
+  const labels = ['RPS', 'Brier', 'Log-loss'];
+  const modelVals   = [m.rps,          m.brier,          m.logloss];
+  const baselineVals= [b.uniformRps,   b.uniformBrier,   b.uniformLogloss];
+
+  new Chart(document.getElementById('baselineChart'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'This Model',        data: modelVals,    backgroundColor: 'rgba(63,185,80,0.7)',   borderColor: '#3fb950', borderWidth: 1, borderRadius: 3 },
+        { label: 'Uniform Baseline',  data: baselineVals, backgroundColor: 'rgba(125,133,144,0.3)', borderColor: '#7d8590', borderWidth: 1, borderRadius: 3 },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { font: { size: 10 }, boxWidth: 10 } } },
+      scales: {
+        x: { ticks: { font: { size: 11 } }, grid: { color: '#30363d60' } },
+        y: { ticks: { font: { size: 10 } }, grid: { color: '#30363d60' } }
+      }
+    }
+  });
+}
+
+// ─── Ratings ─────────────────────────────────────────────────────────────────
+function renderRatings(ratings) {
+  const sorted = Object.entries(ratings).sort((a, b) => b[1] - a[1]);
+  const labels = sorted.map(([k]) => titleCase(k));
+  const values = sorted.map(([, v]) => v);
+  const colors = values.map(v =>
+    v >= 1950 ? 'rgba(63,185,80,0.75)'  :
+    v >= 1800 ? 'rgba(88,166,255,0.75)' :
+    v >= 1650 ? 'rgba(210,153,34,0.75)' : 'rgba(248,81,73,0.65)'
+  );
+
+  new Chart(document.getElementById('ratingsChart'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Elo Rating',
+        data: values,
+        backgroundColor: colors,
+        borderColor: colors.map(c => c.replace(/[\d.]+\)$/, '1)')),
+        borderWidth: 1,
+        borderRadius: 2,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => `Elo: ${ctx.raw}`,
+            afterLabel: ctx => {
+              const v = ctx.raw;
+              return v >= 1950 ? 'Elite' : v >= 1800 ? 'Strong' : v >= 1650 ? 'Mid-tier' : 'Lower-tier';
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          min: 1250,
+          title: { display: true, text: 'Elo Rating' },
+          ticks: { font: { size: 11 } },
+          grid: { color: '#30363d80' },
+        },
+        y: {
+          ticks: { font: { size: 11 }, color: '#e6edf3' },
+          grid: { display: false }
+        }
+      }
+    }
+  });
+}
+
+// ─── Groups ───────────────────────────────────────────────────────────────────
+function computeStandings(matches) {
+  const groups = {};
+  for (const m of matches) {
+    if (!m.group || m.status !== 'FT') continue;
+    if (!groups[m.group]) groups[m.group] = {};
+    const g = groups[m.group];
+    const init = name => { if (!g[name]) g[name] = { name, mp: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0, pts: 0 }; };
+    init(m.team1); init(m.team2);
+    const t1 = g[m.team1], t2 = g[m.team2];
+    t1.mp++; t2.mp++;
+    t1.gf += m.g1; t1.ga += m.g2;
+    t2.gf += m.g2; t2.ga += m.g1;
+    if (m.g1 > m.g2)      { t1.w++; t1.pts += 3; t2.l++; }
+    else if (m.g1 < m.g2) { t2.w++; t2.pts += 3; t1.l++; }
+    else                   { t1.d++; t1.pts++; t2.d++; t2.pts++; }
+  }
+  const counts = {};
+  for (const m of matches) if (m.group) counts[m.group] = (counts[m.group] || 0) + 1;
+
+  for (const g in groups) {
+    groups[g] = {
+      teams: Object.values(groups[g]).sort((a, b) =>
+        b.pts - a.pts || (b.gf - b.ga) - (a.gf - a.ga) || b.gf - a.gf
+      ),
+      matchesPlayed: counts[g] || 0,
+    };
+  }
+  return groups;
+}
+
+function renderGroups(matches) {
+  const standings = computeStandings(matches);
+  const groupNames = Object.keys(standings).sort();
+  const complete = groupNames.filter(g => standings[g].matchesPlayed === 6).length;
+  const total = matches.length;
+  document.getElementById('groups-sub').textContent =
+    `${total} of 72 group stage matches played · ${complete}/12 groups complete · top-2 (green) advance`;
+
+  document.getElementById('groups-container').innerHTML = groupNames.map(gName => {
+    const { teams, matchesPlayed } = standings[gName];
+    const isComplete = matchesPlayed === 6;
+    const rows = teams.map((t, i) => {
+      const gd = t.gf - t.ga;
+      return `<tr class="${isComplete && i < 2 ? 'q-row' : ''}">
+        <td style="color:var(--muted); width:20px">${i + 1}</td>
+        <td>${t.name}</td>
+        <td class="c">${t.mp}</td>
+        <td class="c">${t.w}</td>
+        <td class="c">${t.d}</td>
+        <td class="c">${t.l}</td>
+        <td class="c">${t.gf}</td>
+        <td class="c">${t.ga}</td>
+        <td class="c" style="color:${gd >= 0 ? 'var(--green)' : 'var(--red)'}">${gd >= 0 ? '+' : ''}${gd}</td>
+        <td class="c"><strong>${t.pts}</strong></td>
+      </tr>`;
+    }).join('');
+    return `<div class="group-card">
+      <div class="group-title">
+        ${gName}
+        <span class="badge ${isComplete ? 'badge-green' : 'badge-yellow'}">${isComplete ? 'Complete' : matchesPlayed/2 + '/3 played'}</span>
+      </div>
+      <table class="group-table">
+        <thead><tr>
+          <th></th><th>Team</th><th class="c">MP</th><th class="c">W</th><th class="c">D</th><th class="c">L</th>
+          <th class="c">GF</th><th class="c">GA</th><th class="c">GD</th><th class="c">Pts</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+  }).join('');
+}
+
+// ─── Results ──────────────────────────────────────────────────────────────────
+function renderResults(matches, ratings) {
+  let correct = 0, total = 0;
+  const rows = [];
+
+  for (const m of [...matches].sort((a, b) => a.date.localeCompare(b.date))) {
+    if (m.status !== 'FT') continue;
+    const rA = ratings[m.t1] || 1500;
+    const rB = ratings[m.t2] || 1500;
+    const bonus = getHomeBonus(m.t1, m.t2);
+    const p = matchProb(rA, rB, bonus);
+
+    let pick, conf, pickLabel;
+    if (p.winA >= p.draw && p.winA >= p.winB) { pick = 'team1'; conf = p.winA; pickLabel = m.team1; }
+    else if (p.winB >= p.draw)                 { pick = 'team2'; conf = p.winB; pickLabel = m.team2; }
+    else                                        { pick = 'draw';  conf = p.draw; pickLabel = 'Draw'; }
+
+    const actual = m.g1 > m.g2 ? 'team1' : m.g1 < m.g2 ? 'team2' : 'draw';
+    const ok = pick === actual;
+    if (ok) correct++; total++;
+
+    const w1 = (p.winA * 100).toFixed(0), d = (p.draw * 100).toFixed(0), w2 = (p.winB * 100).toFixed(0);
+    rows.push(`<tr>
+      <td style="white-space:nowrap; color:var(--muted)">${m.date}</td>
+      <td style="color:var(--muted); font-size:0.78rem; white-space:nowrap">${m.group} · ${m.round}</td>
+      <td>${m.team1} <span style="color:var(--muted)">vs</span> ${m.team2}</td>
+      <td class="c" style="font-weight:600; white-space:nowrap">${m.g1} – ${m.g2}</td>
+      <td>${pickLabel}</td>
+      <td class="r" style="white-space:nowrap">
+        <span style="font-size:0.82rem">${pct(conf, 1)}</span>
+        <div class="prob-bar" style="width:72px; margin-left:auto">
+          <div class="pb-w1" style="width:${w1}%"></div>
+          <div class="pb-d"  style="width:${d}%"></div>
+          <div class="pb-w2" style="width:${w2}%"></div>
+        </div>
+      </td>
+      <td class="c ${ok ? 'correct' : 'wrong'}">${ok ? '✓' : '✗'}</td>
+    </tr>`);
+  }
+
+  document.getElementById('results-body').innerHTML = rows.join('');
+  document.getElementById('results-sub').textContent =
+    `${correct}/${total} correct picks (${pct(correct/total, 0)}) across ${total} WC 2026 group stage matches`;
+}
+
+// ─── Predictor ────────────────────────────────────────────────────────────────
+function populatePredictor(ratings) {
+  const sorted = Object.keys(ratings).sort((a, b) => ratings[b] - ratings[a]);
+  const opts = sorted.map(k => `<option value="${k}">${titleCase(k)} (${ratings[k]})</option>`).join('');
+  document.getElementById('pred-team-a').innerHTML = opts;
+  document.getElementById('pred-team-b').innerHTML = opts;
+  // Default second selection to a different team
+  document.getElementById('pred-team-b').value = sorted[1];
+}
+
+function runPredictor() {
+  const slugA = document.getElementById('pred-team-a').value;
+  const slugB = document.getElementById('pred-team-b').value;
+  const homeOpt = document.getElementById('pred-home').value;
+  if (slugA === slugB) { alert('Pick two different teams.'); return; }
+
+  const rA = RATINGS[slugA] || 1500;
+  const rB = RATINGS[slugB] || 1500;
+  let bonus = 0;
+  if (homeOpt === 'a') bonus = HOME_ADV;
+  if (homeOpt === 'b') bonus = -HOME_ADV;
+
+  const p = matchProb(rA, rB, bonus);
+  const nameA = titleCase(slugA), nameB = titleCase(slugB);
+
+  document.getElementById('pred-name-a').textContent = nameA;
+  document.getElementById('pred-name-b').textContent = nameB;
+  document.getElementById('pred-lbl-w1').textContent = nameA + ' Win';
+  document.getElementById('pred-lbl-w2').textContent = nameB + ' Win';
+  document.getElementById('pred-w1').textContent = pct(p.winA);
+  document.getElementById('pred-d').textContent  = pct(p.draw);
+  document.getElementById('pred-w2').textContent = pct(p.winB);
+  document.getElementById('pred-xg-a').textContent = p.lam.toFixed(2);
+  document.getElementById('pred-xg-b').textContent = p.mu.toFixed(2);
+  document.getElementById('pred-xg-lbl-a').textContent = nameA;
+  document.getElementById('pred-xg-lbl-b').textContent = nameB;
+
+  const ou25 = p.matrix.reduce((acc, s) => {
+    const tot = s.a + s.b;
+    if (tot > 2.5) acc.over += s.p; else acc.under += s.p;
+    return acc;
+  }, { over: 0, under: 0 });
+  const ouTot = ou25.over + ou25.under;
+  document.getElementById('pred-over').textContent  = pct(ou25.over / ouTot);
+  document.getElementById('pred-under').textContent = pct(ou25.under / ouTot);
+
+  const top = p.matrix.slice(0, 9);
+  const totP = top.reduce((s, x) => s + x.p, 0);
+  document.getElementById('pred-scores').innerHTML = top.map(s =>
+    `<div class="scoreline"><span>${s.a}–${s.b}</span><span class="sp">${pct(s.p / totP * (totP / 1), 1)}</span></div>`
+  ).join('');
+
+  document.getElementById('predictor-result').style.display = 'block';
+}
+
+init().catch(err => {
+  console.error('Failed to load data:', err);
+  document.querySelector('main').insertAdjacentHTML('afterbegin',
+    '<div style="background:#3d1a1a; border:1px solid #f85149; border-radius:8px; padding:1rem; margin-bottom:2rem; color:#f85149">' +
+    '⚠ Could not load data. Make sure you\'re running <code>node serve.mjs</code> and visiting <strong>http://localhost:3000</strong>.</div>'
+  );
+});
+</script>
+</body>
+</html>
