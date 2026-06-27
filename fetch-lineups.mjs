@@ -11,7 +11,16 @@
 //
 // After fetching: node sg-pools.mjs  (reads lineups-cache.json automatically)
 
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+
+// Load .env if present (key stored locally, never committed)
+const envFile = new URL('./.env', import.meta.url);
+if (existsSync(envFile)) {
+  for (const line of readFileSync(envFile, 'utf8').split('\n')) {
+    const m = line.match(/^([^#=]+)=(.*)$/);
+    if (m && !process.env[m[1].trim()]) process.env[m[1].trim()] = m[2].trim();
+  }
+}
 
 const D = f => new URL('./data/' + f, import.meta.url);
 const KEY = process.env.RAPIDAPI_KEY;
