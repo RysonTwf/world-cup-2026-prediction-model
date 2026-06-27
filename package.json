@@ -8,7 +8,8 @@
     "backtest": "node backtest.mjs",
     "predict": "node predict.mjs",
     "sg-pools": "node sg-pools.mjs",
-    "validate-lineups": "node validate-lineups.mjs"
+    "validate-lineups": "node validate-lineups.mjs",
+    "live-ratings": "node live-ratings.mjs"
   },
   "keywords": [
     "world-cup-2026", "fifa", "football", "soccer", "predictions", "elo",

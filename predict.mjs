@@ -5,8 +5,18 @@
 import { readFileSync } from "node:fs";
 import { ensembleProb } from "./elo.mjs";
 
-const { ratings: elo  } = JSON.parse(readFileSync(new URL("./data/elo-calibrated.json", import.meta.url), "utf8"));
-const { ratings: form } = JSON.parse(readFileSync(new URL("./data/elo-form.json",       import.meta.url), "utf8"));
+// Use live in-tournament ratings if available, else fall back to frozen calibrated.
+let elo, form, ratingsSource;
+try {
+  const live = JSON.parse(readFileSync(new URL("./data/elo-live.json", import.meta.url), "utf8"));
+  elo  = live.ratings;
+  form = live.formRatings;
+  ratingsSource = `live (${live.matchesApplied} WC matches applied, through ${live.dataThrough?.slice(0, 10)})`;
+} catch {
+  ({ ratings: elo  } = JSON.parse(readFileSync(new URL("./data/elo-calibrated.json", import.meta.url), "utf8")));
+  ({ ratings: form } = JSON.parse(readFileSync(new URL("./data/elo-form.json",       import.meta.url), "utf8")));
+  ratingsSource = "calibrated (pre-tournament, frozen)";
+}
 const [a, b, home] = process.argv.slice(2);
 
 if (!a || !b) {
@@ -28,5 +38,5 @@ console.log(`  ${a.padEnd(16)} win  ${(p.winA * 100).toFixed(1).padStart(5)}%  $
 console.log(`  ${"draw".padEnd(16)}      ${(p.draw * 100).toFixed(1).padStart(5)}%  ${bar(p.draw)}`);
 console.log(`  ${b.padEnd(16)} win  ${(p.winB * 100).toFixed(1).padStart(5)}%  ${bar(p.winB)}`);
 console.log(`\n  expected goals (ensemble):  ${p.expectedGoalsA.toFixed(2)} – ${p.expectedGoalsB.toFixed(2)}`);
-console.log(`  (Elo ratings frozen at tournament start; form signal uses 90-day half-life)\n`);
+console.log(`  (Ratings source: ${ratingsSource}; form signal uses 90-day half-life)\n`);
 console.log("  Full 48-team tournament title odds (50,000 sims, conditioned on real results): https://cup26matches.com");
