@@ -3,14 +3,15 @@
 // data/wc2026-results.json (finished matches) + the model's frozen tournament ratings.
 //   node track-record.mjs
 //
-// HONESTY NOTE: the ratings are frozen for the whole tournament (no mid-tournament re-fit),
+// HONESTY NOTE: both rating sets are frozen at tournament start (no mid-tournament re-fit),
 // so the probabilities below are exactly what the model said BEFORE each match — recomputing
 // them after the fact gives the same numbers. Every call is shown, hits and misses alike.
 import { readFileSync, writeFileSync } from "node:fs";
-import { matchProb } from "./elo.mjs";
+import { ensembleProb } from "./elo.mjs";
 
 const D = (f) => new URL(`./data/${f}`, import.meta.url);
 const { ratings } = JSON.parse(readFileSync(D("elo-calibrated.json"), "utf8"));
+const { ratings: form } = JSON.parse(readFileSync(D("elo-form.json"), "utf8"));
 const { updated, matches } = JSON.parse(readFileSync(D("wc2026-results.json"), "utf8"));
 
 const HOST = new Set(["mexico", "usa", "canada"]);
@@ -24,7 +25,7 @@ for (const m of [...matches].sort((x, y) => (y.date || "").localeCompare(x.date 
   const ra = ratings[m.t1], rb = ratings[m.t2];
   if (ra == null || rb == null) continue;
   const hb = (HOST.has(m.t1) ? HOME_ADV : 0) - (HOST.has(m.t2) ? HOME_ADV : 0);
-  const p = matchProb(ra, rb, hb);
+  const p = ensembleProb(ra, rb, form[m.t1] ?? ra, form[m.t2] ?? rb, hb);
   const probs = [p.winA, p.draw, p.winB];
   const actual = m.g1 > m.g2 ? 0 : m.g1 < m.g2 ? 2 : 1;
   const y = [actual === 0 ? 1 : 0, actual === 1 ? 1 : 0, actual === 2 ? 1 : 0];
