@@ -3,6 +3,7 @@
 // Produces data/elo-live.json — picked up automatically by predict.mjs and sg-pools.mjs.
 //   node live-ratings.mjs
 import { readFileSync, writeFileSync } from 'node:fs';
+import { HOME_ADV } from './elo.mjs';
 
 const D = (f) => new URL(`./data/${f}`, import.meta.url);
 
@@ -15,7 +16,6 @@ const R  = { ...base };
 const RF = { ...baseForm };
 
 const HOST   = new Set(['usa', 'mexico', 'canada']);
-const HOME_ADV = 150;
 
 const expectedScore = (a, b, hb = 0) => 1 / (1 + Math.pow(10, (b - (a + hb)) / 400));
 const gMult = (gd) => { const d = Math.abs(gd); return d <= 1 ? 1 : d === 2 ? 1.5 : (11 + d) / 8; };

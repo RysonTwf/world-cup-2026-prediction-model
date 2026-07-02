@@ -1,11 +1,18 @@
 #!/usr/bin/env node
 // Singapore Pools betting predictions for WC 2026.
 // Usage:
-//   node sg-pools.mjs                        → all upcoming group-stage MD3 fixtures
-//   node sg-pools.mjs brazil scotland        → single fixture (neutral)
-//   node sg-pools.mjs usa turkey usa         → single fixture with home advantage
-import { readFileSync } from 'node:fs';
-import { expectedGoals } from './elo.mjs';
+//   node sg-pools.mjs                             → all upcoming group-stage MD3 fixtures
+//   node sg-pools.mjs brazil scotland             → single fixture (neutral)
+//   node sg-pools.mjs usa turkey usa              → single fixture with home advantage
+//   node sg-pools.mjs colombia ghana --sp h d a   → + EV check vs Singapore Pools odds
+//
+// Enrichment pipeline (run in order before sg-pools.mjs, all optional):
+//   node live-ratings.mjs      → data/elo-live.json       (in-tournament Elo updates)
+//   node fetch-lineups.mjs     → data/lineups-cache.json  (needs RAPIDAPI_KEY — confirmed lineups + injuries)
+//   node fetch-sp-odds.mjs     → data/sp-odds.json        (run on your local machine, SP is geo-restricted)
+//   node sg-pools.mjs          → picks up all three automatically
+import { readFileSync, existsSync } from 'node:fs';
+import { expectedGoals, HOME_ADV } from './elo.mjs';
 import {
   buildScoreMatrix,
   market1X2, marketHT1X2, market2H1X2,
@@ -30,6 +37,89 @@ try {
 
 // USA, Canada, Mexico are co-hosts — get home advantage when playing.
 const HOSTS = new Set(['usa', 'mexico', 'canada']);
+
+// ── Player-impact table (Elo points lost if this player is absent from the starting XI) ──
+const playerImpacts = JSON.parse(
+  readFileSync(new URL('./data/player-impacts.json', import.meta.url), 'utf8')
+);
+
+// ── Lineup / injury cache (from fetch-lineups.mjs, needs RAPIDAPI_KEY) ───────────────────
+const lineupFile = new URL('./data/lineups-cache.json', import.meta.url);
+const lineupData = existsSync(lineupFile) ? JSON.parse(readFileSync(lineupFile, 'utf8')) : null;
+
+// Compute a team's lineup/injury Elo adjustment from cached data. Returns a negative delta
+// when key players (per player-impacts.json) are confirmed absent or injured.
+function lineupAdjustment(slug, sideKey, fixtureEntry) {
+  if (!fixtureEntry || !playerImpacts[slug]) return { delta: 0, reasons: [] };
+  const impacts = playerImpacts[slug];
+  const reasons = [];
+
+  if (fixtureEntry.confirmedLineups && fixtureEntry.starters[sideKey]?.length) {
+    const starters = fixtureEntry.starters[sideKey].map(n => n.toLowerCase());
+    for (const [player, impact] of Object.entries(impacts)) {
+      const inXI = starters.some(s => s.includes(player.split(' ').pop().toLowerCase()));
+      if (!inXI) reasons.push({ player, impact, source: 'lineup' });
+    }
+  }
+
+  for (const absentee of (fixtureEntry.absentees?.[sideKey] ?? [])) {
+    const n = absentee.player.toLowerCase();
+    for (const [player, impact] of Object.entries(impacts)) {
+      const alreadyListed = reasons.some(r => r.player === player);
+      if (!alreadyListed && n.includes(player.split(' ').pop().toLowerCase())) {
+        reasons.push({ player, impact, source: absentee.type });
+      }
+    }
+  }
+
+  const delta = -reasons.reduce((s, r) => s + r.impact, 0);
+  return { delta, reasons };
+}
+
+// ── SP odds cache (from fetch-sp-odds.mjs — run on your local machine) ───────────────────
+const spOddsFile = new URL('./data/sp-odds.json', import.meta.url);
+const spOddsData = existsSync(spOddsFile) ? JSON.parse(readFileSync(spOddsFile, 'utf8')) : null;
+
+function spOddsFor(team1Name, team2Name) {
+  if (!spOddsData?.odds?.length) return null;
+  const n1 = team1Name.toLowerCase(), n2 = team2Name.toLowerCase();
+  const match = spOddsData.odds.find(o => {
+    const h = (o.home ?? '').toLowerCase(), a = (o.away ?? '').toLowerCase();
+    return (h.includes(n1.split(' ')[0]) || h.includes(n1.split('-')[0])) &&
+           (a.includes(n2.split(' ')[0]) || a.includes(n2.split('-')[0])) ||
+           (h.includes(n2.split(' ')[0]) || h.includes(n2.split('-')[0])) &&
+           (a.includes(n1.split(' ')[0]) || a.includes(n1.split('-')[0]));
+  });
+  if (!match?.odds1x2) return null;
+  const h = (match.home ?? '').toLowerCase();
+  const flipped = h.includes(n2.split(' ')[0]) || h.includes(n2.split('-')[0]);
+  return flipped
+    ? { h: match.odds1x2.away, d: match.odds1x2.draw, a: match.odds1x2.home }
+    : match.odds1x2;
+}
+
+// EV check: spOdds = { h: decimal, d: decimal, a: decimal }
+function printEV(matchResult, spOdds, auto = false) {
+  if (!matchResult || !spOdds) return;
+  const { r, n1, n2 } = matchResult;
+  const evH = r.w1 * spOdds.h - 1;
+  const evD = r.d  * spOdds.d - 1;
+  const evA = r.w2 * spOdds.a - 1;
+  const fmt  = ev => (ev >= 0 ? '+' : '') + (ev * 100).toFixed(1) + '%';
+  const flag = ev => ev > 0.02 ? '  ◄ +EV' : ev > 0 ? '  ◄ marginal' : '';
+  const label = auto ? 'LIVE SP ODDS — EV CHECK' : 'EV CHECK  (SP odds entered)';
+
+  console.log(`\n  ${label}`);
+  console.log('─'.repeat(W));
+  console.log(`  ${n1.padEnd(20)} SP ${String(spOdds.h.toFixed(2)).padStart(5)}   fair ${fair(r.w1).padStart(5)}   EV ${fmt(evH)}${flag(evH)}`);
+  console.log(`  ${'Draw'.padEnd(20)} SP ${String(spOdds.d.toFixed(2)).padStart(5)}   fair ${fair(r.d).padStart(5)}   EV ${fmt(evD)}${flag(evD)}`);
+  console.log(`  ${n2.padEnd(20)} SP ${String(spOdds.a.toFixed(2)).padStart(5)}   fair ${fair(r.w2).padStart(5)}   EV ${fmt(evA)}${flag(evA)}`);
+  const best = [['1', evH], ['X', evD], ['2', evA]].filter(([, e]) => e > 0);
+  console.log(best.length === 0
+    ? `\n  No +EV on 1X2 at these SP prices.`
+    : `\n  ★  Best bet: ${best.map(([k]) => k).join(' / ')} has positive EV at current SP prices.`);
+  console.log('');
+}
 
 // ── Match-stakes feature ──────────────────────────────────────────────────────
 // Stakes are derived from group standings and applied as an Elo modifier.
@@ -120,37 +210,58 @@ const pc = p => `${pct(p).padStart(6)}  ${fair(p).padStart(5)}`;
 
 function printMatch(fix) {
   const rA = ratings[fix.t1], rB = ratings[fix.t2];
-  if (!rA || !rB) { console.error(`  [SKIP] Missing rating for ${fix.t1} or ${fix.t2}`); return; }
+  if (!rA || !rB) { console.error(`  [SKIP] Missing rating for ${fix.t1} or ${fix.t2}`); return null; }
 
   // Stakes adjustment: DISABLED.
   // Backtested on historical dead-rubber matches: worsens RPS on both available baselines
   // (old-param baseline +10.4% worse, current-param baseline +4.0% worse). Placeholder
-  // values (STAKES_SECURE/STAKES_DEAD) remain in place. Re-enable after WC 2026 MD3
-  // calibration by restoring: eA = rA + stA.delta  /  eB = rB + stB.delta
+  // values (STAKES_SECURE/STAKES_DEAD) remain in place. Re-enable after full-tournament
+  // calibration by restoring: eA += stA.delta  /  eB += stB.delta
   const stA = STAKES_MAP[fix.t1] ?? { label: '????', delta: 0 };
   const stB = STAKES_MAP[fix.t2] ?? { label: '????', delta: 0 };
-  const eA = rA;  // stakes disabled — was: rA + stA.delta
-  const eB = rB;  // stakes disabled — was: rB + stB.delta
 
-  // Home advantage: host team gets +150 Elo (single-sided — only home team's attack boosted).
-  const hb = HOSTS.has(fix.t1) ? 150 : HOSTS.has(fix.t2) ? -150 : 0;
+  // Lineup/injury adjustment: from data/lineups-cache.json (fetch-lineups.mjs), keyed by
+  // player-impacts.json. Zero delta (and a "not modeled" note) if no cache is present.
+  const fixtureEntry = lineupData?.matches?.find(
+    m => (m.homeSlug === fix.t1 && m.awaySlug === fix.t2) ||
+         (m.homeSlug === fix.t2 && m.awaySlug === fix.t1)
+  );
+  const adjA = lineupAdjustment(fix.t1, fixtureEntry?.homeSlug === fix.t1 ? 'home' : 'away', fixtureEntry);
+  const adjB = lineupAdjustment(fix.t2, fixtureEntry?.homeSlug === fix.t2 ? 'home' : 'away', fixtureEntry);
+
+  const eA = rA + adjA.delta;  // stakes disabled — was also: + stA.delta
+  const eB = rB + adjB.delta;  // stakes disabled — was also: + stB.delta
+
+  // Home advantage: host team gets +HOME_ADV Elo (single-sided — only home team's attack boosted).
+  const hb = HOSTS.has(fix.t1) ? HOME_ADV : HOSTS.has(fix.t2) ? -HOME_ADV : 0;
   const lA = expectedGoals(eA, eB, hb > 0 ? hb : 0);
   const lB = expectedGoals(eB, eA, hb < 0 ? -hb : 0);
   const matrix = buildScoreMatrix(lA, lB);
 
-  const homeTag = hb > 0 ? `  [${fix.team1} at home +150]`
-                : hb < 0 ? `  [${fix.team2} at home +150]`
+  const homeTag = hb > 0 ? `  [${fix.team1} at home +${HOME_ADV}]`
+                : hb < 0 ? `  [${fix.team2} at home +${HOME_ADV}]`
                 : '  [neutral]';
   const n1 = fix.team1, n2 = fix.team2;
 
   const eloLine = `  Elo: ${n1} ${rA}  |  ${n2} ${rB}`;
-  const rotationNote = '  Rotation/lineup risk: NOT MODELED (stakes adjustment disabled — pending MD3 calibration)';
 
   console.log('\n' + HR('='));
   console.log(`  GROUP ${fix.group}  |  ${n1.toUpperCase()}  vs  ${n2.toUpperCase()}${homeTag}`);
   console.log(eloLine);
   console.log(`  Ratings: ${ratingsSource}`);
-  console.log(rotationNote);
+  if (adjA.reasons.length || adjB.reasons.length) {
+    console.log('  Player absences:');
+    for (const r of adjA.reasons) console.log(`    ${n1}: ${r.player} absent (${r.source}) → −${r.impact} Elo`);
+    for (const r of adjB.reasons) console.log(`    ${n2}: ${r.player} absent (${r.source}) → −${r.impact} Elo`);
+    const effLine = [];
+    if (adjA.delta) effLine.push(`${n1} effective ${eA}`);
+    if (adjB.delta) effLine.push(`${n2} effective ${eB}`);
+    if (effLine.length) console.log(`  → Effective: ${effLine.join('  |  ')}`);
+  } else if (fixtureEntry?.confirmedLineups) {
+    console.log('  Lineups confirmed — all key players present.');
+  } else {
+    console.log('  Lineups: not yet cached (run node fetch-lineups.mjs closer to kickoff for player-level adjustments).');
+  }
   console.log(`  Expected goals: ${n1} ${lA.toFixed(2)} – ${n2} ${lB.toFixed(2)}  (total ${(lA+lB).toFixed(2)})`);
   console.log(HR('='));
 
@@ -292,6 +403,13 @@ function printMatch(fix) {
   }
 
   console.log('');
+
+  // Auto EV check if SP odds are loaded from sp-odds.json
+  const result = { r, n1, n2 };
+  const autoSP = spOddsFor(n1, n2);
+  if (autoSP?.h && autoSP?.d && autoSP?.a) printEV(result, autoSP, /* auto= */ true);
+
+  return result;
 }
 
 // ── Entry point ───────────────────────────────────────────────────────────────
@@ -340,7 +458,16 @@ async function pickAndShow() {
   }
 }
 
-const args = process.argv.slice(2);
+let args = process.argv.slice(2);
+
+// Parse --sp h d a anywhere in args
+const spIdx = args.indexOf('--sp');
+let cliSpOdds = null;
+if (spIdx !== -1) {
+  const odds = args.slice(spIdx + 1, spIdx + 4).map(Number);
+  if (odds.length === 3 && odds.every(n => n > 1)) cliSpOdds = { h: odds[0], d: odds[1], a: odds[2] };
+  args = args.filter((_, i) => i < spIdx || i > spIdx + 3);
+}
 
 if (args.length === 0) {
   pickAndShow();
@@ -357,11 +484,13 @@ if (args.length === 0) {
   else if (homeSlug)            { HOSTS.clear(); }           // explicit neutral
   const fix = FIXTURES.find(f => f.t1 === t1slug && f.t2 === t2slug)
            ?? { group: '?', team1: label(t1slug), t1: t1slug, team2: label(t2slug), t2: t2slug };
-  printMatch(fix);
+  const result = printMatch(fix);
+  if (cliSpOdds) printEV(result, cliSpOdds);
 } else {
   console.log('Usage:');
-  console.log('  node sg-pools.mjs                         → all MD3 group fixtures');
-  console.log('  node sg-pools.mjs <team1> <team2>         → single match (neutral)');
-  console.log('  node sg-pools.mjs <team1> <team2> <home>  → with home advantage');
+  console.log('  node sg-pools.mjs                             → all MD3 group fixtures');
+  console.log('  node sg-pools.mjs <team1> <team2>             → single match (neutral)');
+  console.log('  node sg-pools.mjs <team1> <team2> <home>      → with home advantage');
+  console.log('  node sg-pools.mjs <team1> <team2> --sp h d a  → + EV check vs SP odds');
   console.log(`\nSlugs: ${Object.keys(ratings).sort().join(', ')}`);
 }

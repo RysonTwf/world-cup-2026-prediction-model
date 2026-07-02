@@ -3,7 +3,7 @@
 //   node predict.mjs brazil argentina            (neutral venue)
 //   node predict.mjs usa mexico usa               (3rd arg = home team)
 import { readFileSync } from "node:fs";
-import { ensembleProb } from "./elo.mjs";
+import { ensembleProb, HOME_ADV } from "./elo.mjs";
 
 // Use live in-tournament ratings if available, else fall back to frozen calibrated.
 let elo, form, ratingsSource;
@@ -29,7 +29,7 @@ if (elo[a] == null || elo[b] == null) {
   process.exit(1);
 }
 
-const hb = home === a ? 150 : home === b ? -150 : 0;
+const hb = home === a ? HOME_ADV : home === b ? -HOME_ADV : 0;
 const p  = ensembleProb(elo[a], elo[b], form[a] ?? elo[a], form[b] ?? elo[b], hb);
 const bar = (x) => "█".repeat(Math.round(x * 30));
 

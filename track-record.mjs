@@ -7,7 +7,7 @@
 // so the probabilities below are exactly what the model said BEFORE each match — recomputing
 // them after the fact gives the same numbers. Every call is shown, hits and misses alike.
 import { readFileSync, writeFileSync } from "node:fs";
-import { ensembleProb } from "./elo.mjs";
+import { ensembleProb, HOME_ADV } from "./elo.mjs";
 
 const D = (f) => new URL(`./data/${f}`, import.meta.url);
 const { ratings } = JSON.parse(readFileSync(D("elo-calibrated.json"), "utf8"));
@@ -15,7 +15,6 @@ const { ratings: form } = JSON.parse(readFileSync(D("elo-form.json"), "utf8"));
 const { updated, matches } = JSON.parse(readFileSync(D("wc2026-results.json"), "utf8"));
 
 const HOST = new Set(["mexico", "usa", "canada"]);
-const HOME_ADV = 150;
 const rps3 = (p, y) => 0.5 * ((p[0] - y[0]) ** 2 + (p[0] + p[1] - y[0] - y[1]) ** 2);
 
 let lines = [];

@@ -1,7 +1,9 @@
 // Elo + Dixon-Coles bivariate Poisson — the match model behind https://cup26matches.com
 // References: World Football Elo; Maher (1982); Dixon & Coles (1997).
-// Dixon-Coles ρ — corrects vanilla Poisson's under-count of 0-0 / 1-1 draws. ~ -0.13 empirically.
-export const DC_RHO = -0.13;
+// Dixon-Coles ρ, HOME_ADV, and the expectedGoals base/scale below are all fitted by
+// coordinate descent (see tune.mjs) minimising walk-forward RPS on results.json.
+export const DC_RHO = -0.15;
+export const HOME_ADV = 130;
 
 function dcTau(a, b, lambda, mu, rho) {
   if (a === 0 && b === 0) return 1 - lambda * mu * rho;
@@ -20,7 +22,7 @@ export function expectedScore(ratingA, ratingB, homeBonusA = 0) {
 // near real football upset frequency.
 export function expectedGoals(rating, opponent, homeBonus = 0) {
   const diff = (rating + homeBonus) - opponent;
-  const lambda = 1.35 + diff / 400;
+  const lambda = 1.25 + diff / 375;
   return Math.max(0.3, Math.min(3.5, lambda));
 }
 
