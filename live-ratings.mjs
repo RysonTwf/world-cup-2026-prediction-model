@@ -28,7 +28,9 @@ let applied = 0;
 const log = [];
 
 for (const m of matches) {
-  if (m.status !== 'FT' || m.g1 == null || m.g2 == null) continue;
+  // FT, AET, and PEN all count — g1/g2 is the score at the end of play (before any shootout),
+  // so a PEN match still scores as a draw for rating purposes (a shootout is close to a coin flip).
+  if (!['FT', 'AET', 'PEN'].includes(m.status) || m.g1 == null || m.g2 == null) continue;
 
   const t1 = m.t1, t2 = m.t2;
   if (R[t1] == null || R[t2] == null) continue;
